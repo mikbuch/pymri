@@ -121,39 +121,4 @@ def get_raw_data(nifti_files_list, paradigm_volumens):
                         sample_cnt += 1
                         # print(paradigm_volumens[run][-1])
 
-
-    # sample_counter = 0
-    # for i in range(len(data_all_classes)):
-        # for j in range(len(data_all_classes[i])):
-            # for k in range(len(data_all_classes[i][j])):
-                # for l in range(len(data_all_classes[i][j][k])):
-                    # sample_counter_mem = sample_counter
-                    # for m in range(len(data_all_classes[i][j][k][l])):
-                        # if \
-                            # (m >= paradigm_volumens[i][0]
-                                # and m < paradigm_volumens[i][0]+8):
-                                # data_two_classes[j][k][l][sample_counter] = \
-                                    # data_all_classes[i][j][k][l][m]
-                                # sample_counter += 1
-                        # if sample_counter_mem - sample_counter == 8:
-                            # sample_counter_mem = sample_counter
-                            # sample_counter -= 8 
-                        # if \
-                            # (m >= paradigm_volumens[i][-1]
-                                # and m < paradigm_volumens[i][-1]+8):
-                                # print('%d, %d, %d, %d' % (j, k, l, sample_counter))
-                                # print(data_two_classes[j][k][l][sample_counter])
-                                # print('%d, %d, %d, %d, %d' % (i, j, k, l, m))
-                                # print(data_all_classes[i][j][k][l][m])
-                                # data_two_classes[j][k][l][sample_counter] = \
-                                    # data_all_classes[i][j][k][l][m]
-                                # sample_counter += 1
-                        # print('counters: %d, %d' %(sample_counter_mem, sample_counter))
-                        # if sample_counter_mem - sample_counter == 8:
-                            # sample_counter_mem = sample_counter
-                            # sample_counter -= 8 
-        # # data_two_classes_category[sample_counter] = category
-        # sample_counter += 16
-        # print(sample_counter)
-
     return data_two_classes, data_two_classes_category

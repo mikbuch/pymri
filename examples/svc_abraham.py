@@ -22,7 +22,10 @@
 import numpy as np
 import nibabel
 from sklearn.datasets.base import Bunch
+
+from pymri.utils.mask_unmask import unmask, get_mask_from_nifti
 from ram.ram_usage_proc import usage_print
+from pymri.model.visualisation import plot_haxby
 
 data_dir = '/home/jesmasta/downloads/pymvpa-exampledata/'
 dataset_files = Bunch(
@@ -42,6 +45,9 @@ affine = bold_img.get_affine()
 y, session = np.loadtxt(dataset_files.session_target).astype("int").T
 conditions = np.recfromtxt(dataset_files.conditions_target)['f0']
 mask = dataset_files.mask
+mask_img = get_mask_from_nifti('/git/pymri/examples/sub001_mask.nii.gz')
+# get background image (example functional image)
+bg_img = nibabel.load('/git/pymri/examples/example_func.nii.gz').get_data()
 # fmri_data.shape is (40, 64, 64, 1452)
 # and mask.shape is (40, 64, 64)
 
@@ -55,8 +61,8 @@ condition_mask = np.logical_or(conditions == 'face', conditions == 'house')
 X = fmri_data[..., condition_mask]
 usage_print()
 y = y[condition_mask]
-session = session[condition_mask]
-conditions = conditions[condition_mask]
+# session = session[condition_mask]
+# conditions = conditions[condition_mask]
 
 # ### Masking step
 # from utils import masking, signal
@@ -75,6 +81,23 @@ from sklearn.cross_validation import train_test_split
 X, X_t, y, y_t = train_test_split(
     X, y, test_size=0.4, random_state=42
     )
+
+###############################################################################
+#
+#   F-score
+#
+###############################################################################
+from sklearn.feature_selection import f_classif
+f_values, p_values = f_classif(X, y)
+p_values = -np.log10(p_values)
+p_values[np.isnan(p_values)] = 0
+p_values[p_values > 10] = 10
+p_unmasked = unmask(p_values, mask_img)
+plot_haxby(p_unmasked, bg_img, 'F-score')
+
+# save statistical map as nifti image
+img = nibabel.Nifti1Image(p_unmasked, np.eye(4))
+img.to_filename('output_stats_f_classif.nii.gz')
 
 ###############################################################################
 #                                                                             #
@@ -125,57 +148,16 @@ coef = clf.coef_
 coef = feature_selection.inverse_transform(coef)
 
 # reverse masking
-from pymri.utils.mask_unmask import unmask, get_mask_from_nifti
 # coef = masking.unmask(coef[0], mask)
-mask_img = get_mask_from_nifti('/git/pymri/examples/sub001_mask.nii.gz')
 coef = unmask(coef[0], mask_img)
 
 # # We use a masked array so that the voxels at '-1' are displayed
 # # transparently
 act = np.ma.masked_array(coef, coef == 0)
 
-# get background image (example functional image)
-bg_img = nibabel.load('/git/pymri/examples/example_func.nii.gz').get_data()
 
-from pymri.model.visualisation import plot_haxby
 plot_haxby(act, bg_img, 'SVC')
 
 # save statistical map as nifti image
 img = nibabel.Nifti1Image(act, np.eye(4))
-img.to_filename('output_stats.nii.gz')
-
-###############################################################################
-#                                                                             #
-#   PCA                                                                       #
-#                                                                             #
-###############################################################################
-from sklearn.decomposition import PCA
-
-# PCA object, number of components
-pca = PCA(n_components=5)
-pca.fit(X, y)
-print('explained variance ratio (first two components): %s'
-      % str(pca.explained_variance_ratio_))
-Z = pca.transform(X)
-C = pca.transform(X_t)
-
-# ### Visualisation (PCA) #####################################################
-
-import matplotlib.pyplot as plt
-for i in range(len(Z)):
-    if y[i] == 1:
-        marker = '^'
-        col = 'b'
-    else:
-        marker = 'o'
-        col = 'r'
-    plt.scatter(Z[i][0], Z[i][1], c=col, marker=marker, s=100)
-for i in range(len(C)):
-    if y_t[i] == 1:
-        marker = '^'
-        col = 'g'
-    else:
-        marker = 'o'
-        col = 'y'
-    plt.scatter(C[i][0], C[i][1], c=col, marker=marker, s=100)
-plt.show()
+img.to_filename('output_stats_svc.nii.gz')
