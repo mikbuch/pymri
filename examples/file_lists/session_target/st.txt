@@ -1,0 +1,12 @@
+/git/pymri/examples/file_lists/session_target/run001_st.txt
+/git/pymri/examples/file_lists/session_target/run002_st.txt
+/git/pymri/examples/file_lists/session_target/run003_st.txt
+/git/pymri/examples/file_lists/session_target/run004_st.txt
+/git/pymri/examples/file_lists/session_target/run005_st.txt
+/git/pymri/examples/file_lists/session_target/run006_st.txt
+/git/pymri/examples/file_lists/session_target/run007_st.txt
+/git/pymri/examples/file_lists/session_target/run008_st.txt
+/git/pymri/examples/file_lists/session_target/run009_st.txt
+/git/pymri/examples/file_lists/session_target/run010_st.txt
+/git/pymri/examples/file_lists/session_target/run011_st.txt
+/git/pymri/examples/file_lists/session_target/run012_st.txt

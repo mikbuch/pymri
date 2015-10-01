@@ -1,0 +1,12 @@
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run001/bold.nii.gz
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run002/bold.nii.gz
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run003/bold.nii.gz
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run004/bold.nii.gz
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run005/bold.nii.gz
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run006/bold.nii.gz
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run007/bold.nii.gz
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run008/bold.nii.gz
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run009/bold.nii.gz
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run010/bold.nii.gz
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run011/bold.nii.gz
+/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/ds105/sub004/BOLD/task001_run012/bold.nii.gz

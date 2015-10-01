@@ -1,33 +1,40 @@
 """
-    Example of SVC and PCA of the Haxby's database.
+svc_selectkbest.py
+script
 
-    Based strongly on Alexandre Abraham's code:
-        https://github.com/AlexandreAbraham/frontiers2013
+############################################
+######  Written by: Mikolaj Buchwald  ######
+############################################
 
-    Novum is sampling step (split original dataset train and test 
-    subsets) and classification performed on test data.
+Example of SVC (Support Vector Classifier) and
+SelectKBest (feature selection) of the Haxby's database.
 
-    Subject 001, data preprocessed with fsl:
-        * brain extraction
-        * motion correction
+Based strongly on Alexandre Abraham's code:
+    https://github.com/AlexandreAbraham/frontiers2013
+
+Novum is sampling step (split original dataset train and test
+subsets) and classification performed on test data.
+Leave-40%-samples-out cross validation has been performed to prove
+the accuracy of the model (classifier - SVC)
+
+Subject 001, data preprocessed with fsl:
+    * brain extraction
+    * motion correction
 """
 
 
-'''
-    MODEL CREATION
-'''
-
 # ### Load Haxby dataset ######################################################
-# from pymri.dataset import datasets_abraham as datasets
 import numpy as np
 import nibabel
 from sklearn.datasets.base import Bunch
 
-from pymri.utils.mask_unmask import unmask, get_mask_from_nifti
-from ram.ram_usage_proc import usage_print
+from os.path import expanduser
 from pymri.model.visualisation import plot_haxby
 
-data_dir = '/home/jesmasta/downloads/pymvpa-exampledata/'
+# data_dir = expanduser('~') + '/workshops/aiml/data/pymvpa-exampledata/'
+data_dir = expanduser('~') + '/downloads/pymvpa-exampledata/'
+
+# create sklearn's Bunch of data
 dataset_files = Bunch(
     func=data_dir+'bold.nii.gz',
     session_target=data_dir+'attributes.txt',
@@ -35,19 +42,14 @@ dataset_files = Bunch(
     conditions_target=data_dir+'attributes_literal.txt'
     )
 
-usage_print()
-
 # fmri_data and mask are copied to break any reference to the original object
 bold_img = nibabel.load(dataset_files.func)
 fmri_data = bold_img.get_data().astype(float)
-usage_print()
 affine = bold_img.get_affine()
 y, session = np.loadtxt(dataset_files.session_target).astype("int").T
 conditions = np.recfromtxt(dataset_files.conditions_target)['f0']
 mask = dataset_files.mask
-mask_img = get_mask_from_nifti('/git/pymri/examples/sub001_mask.nii.gz')
-# get background image (example functional image)
-bg_img = nibabel.load('/git/pymri/examples/example_func.nii.gz').get_data()
+
 # fmri_data.shape is (40, 64, 64, 1452)
 # and mask.shape is (40, 64, 64)
 
@@ -59,7 +61,6 @@ mean_img = fmri_data.mean(axis=-1)
 # ### Restrict to faces and houses
 condition_mask = np.logical_or(conditions == 'face', conditions == 'house')
 X = fmri_data[..., condition_mask]
-usage_print()
 y = y[condition_mask]
 # session = session[condition_mask]
 # conditions = conditions[condition_mask]
@@ -92,8 +93,8 @@ f_values, p_values = f_classif(X, y)
 p_values = -np.log10(p_values)
 p_values[np.isnan(p_values)] = 0
 p_values[p_values > 10] = 10
-p_unmasked = unmask(p_values, mask_img)
-plot_haxby(p_unmasked, bg_img, 'F-score')
+p_unmasked = masking.unmask(p_values, mask)
+plot_haxby(p_unmasked, mean_img, 'F-score')
 
 # save statistical map as nifti image
 img = nibabel.Nifti1Image(p_unmasked, np.eye(4))
@@ -148,16 +149,15 @@ coef = clf.coef_
 coef = feature_selection.inverse_transform(coef)
 
 # reverse masking
-# coef = masking.unmask(coef[0], mask)
-coef = unmask(coef[0], mask_img)
+coef = masking.unmask(coef[0], mask)
 
 # # We use a masked array so that the voxels at '-1' are displayed
 # # transparently
 act = np.ma.masked_array(coef, coef == 0)
 
 
-plot_haxby(act, bg_img, 'SVC')
+plot_haxby(act, mean_img, 'SVC', slice=25)
 
 # save statistical map as nifti image
 img = nibabel.Nifti1Image(act, np.eye(4))
-img.to_filename('output_stats_svc.nii.gz')
+img.to_filename('output_svc_selectkbest.nii.gz')

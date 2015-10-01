@@ -58,7 +58,7 @@ for vol in range(len(attributes)):
     attributes[vol][1] = run_cnt - 1
 
 conditions = get_conditions('/media/e0b555e6-cfa3-41fa-abd8-17ea6e249dc2/\
-ds105/sub001/model/model001/onsets')
+ds105/sub005/model/model001/onsets')
 
 add_one = np.ones(shape=conditions.shape)
 conditions = np.add(conditions, add_one)
