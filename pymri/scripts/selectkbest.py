@@ -49,12 +49,16 @@ mask = dataset_files.mask
 mean_img = fmri_data.mean(axis=-1)
 
 
-# ### Restrict to faces and houses
-condition_mask = np.logical_or(conditions == 'face', conditions == 'house')
-X = fmri_data[..., condition_mask]
-y = y[condition_mask]
-# session = session[condition_mask]
-# conditions = conditions[condition_mask]
+# # ### Restrict to faces and houses
+# condition_mask = np.logical_or(conditions == 'face', conditions == 'house')
+# X = fmri_data[..., condition_mask]
+# y = y[condition_mask]
+# # session = session[condition_mask]
+# # conditions = conditions[condition_mask]
+
+X = fmri_data
+y = y
+
 
 # ### Masking step
 # from utils import masking, signal
@@ -85,7 +89,7 @@ from sklearn.feature_selection import SelectKBest, f_classif
 # ### Define the dimension reduction to be used.
 # Here we use a classical univariate feature selection based on F-test,
 # namely Anova. We set the number of features to be selected to 500
-feature_selection = SelectKBest(f_classif, k=100)
+feature_selection = SelectKBest(f_classif, k=784)
 
 # transform datasets from high import dimensional to k-dimensional
 X = feature_selection.fit_transform(X, y)
@@ -97,9 +101,9 @@ import csv
 with open('train.csv', 'w') as fp:
     a = csv.writer(fp, delimiter=',')
     for i in range(len(X)):
-        a.writerow([y[i]-1] + list(X[i]))
+        a.writerow([y[i]] + list(X[i]))
 
 with open('test.csv', 'w') as fp:
     a = csv.writer(fp, delimiter=',')
     for i in range(len(X_t)):
-        a.writerow(list(X_t[i]))
+        a.writerow([y[i]] + list(X_t[i]))

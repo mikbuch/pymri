@@ -1,26 +1,29 @@
 """
-svc_pca.py
+multiclass_svc_selectkbest.py
 script
 
 ############################################
 ######  Written by: Mikolaj Buchwald  ######
 ############################################
 
-Example of PCA (Principal Component Analysis - feature extraction method
-and SVC (Support Vector Classification) of the Haxby's database.
+Multi-class classification (3 classes: houses, faces and cats).
+
+Example of SVC (Support Vector Classifier) and
+SelectKBest (feature selection) of the Haxby's database.
 
 Based strongly on Alexandre Abraham's code:
     https://github.com/AlexandreAbraham/frontiers2013
 
-Novum in this example is:
-    * use of PCA instead of SelectKBest as dimensionality reduction method,
-    * sampling step (split original dataset train and test subsets) and
-    classification performed on test data.
+Novum is sampling step (split original dataset train and test
+subsets) and classification performed on test data.
+Leave-40%-samples-out cross validation has been performed to prove
+the accuracy of the model (classifier - SVC)
 
 Subject 001, data preprocessed with fsl:
     * brain extraction
     * motion correction
 """
+
 
 # ### Load Haxby dataset ######################################################
 import numpy as np
@@ -57,10 +60,12 @@ mask = dataset_files.mask
 mean_img = fmri_data.mean(axis=-1)
 
 
-# ### Restrict to faces and houses
-condition_mask = np.logical_or(conditions == 'face', conditions == 'house')
-X = fmri_data[..., condition_mask]
-y = y[condition_mask]
+# ### Restrict to faces, houses and cats
+# condition_mask = np.logical_or.reduce((conditions == 'face', conditions == 'house', conditions == 'cat')) 
+# X = fmri_data[..., condition_mask]
+# y = y[condition_mask]
+X = fmri_data
+y = y
 # session = session[condition_mask]
 # conditions = conditions[condition_mask]
 
@@ -74,7 +79,6 @@ X_img = Nifti1Image(X, affine)
 X = masking.apply_mask(X_img, mask, smoothing_fwhm=4)
 # X = signal.clean(X, standardize=True, detrend=False)
 
-
 # ### Sampling ################################################################
 from sklearn.cross_validation import train_test_split
 
@@ -82,6 +86,23 @@ from sklearn.cross_validation import train_test_split
 X, X_t, y, y_t = train_test_split(
     X, y, test_size=0.4, random_state=42
     )
+
+###############################################################################
+#
+#   F-score
+#
+###############################################################################
+from sklearn.feature_selection import f_classif
+f_values, p_values = f_classif(X, y)
+p_values = -np.log10(p_values)
+p_values[np.isnan(p_values)] = 0
+p_values[p_values > 10] = 10
+p_unmasked = masking.unmask(p_values, mask)
+plot_haxby(p_unmasked, mean_img, 'F-score')
+
+# save statistical map as nifti image
+img = nibabel.Nifti1Image(p_unmasked, np.eye(4))
+img.to_filename('output_stats_f_classif.nii.gz')
 
 ###############################################################################
 #                                                                             #
@@ -94,32 +115,33 @@ clf = SVC(kernel='linear', C=0.01)
 
 # ### Dimension reduction #####################################################
 
-from sklearn.decomposition import PCA
+from sklearn.feature_selection import SelectKBest, f_classif
 
-# PCA model creation, number of components
-# feature extraction method. Used here (after sampling) because we are
-# creating an universal model and not this_dataset-specific.
-feature_extraction = PCA(n_components=500)
+# ### Define the dimension reduction to be used.
+# Here we use a classical univariate feature selection based on F-test,
+# namely Anova. We set the number of features to be selected to 500
+feature_selection = SelectKBest(f_classif, k=500)
 
-# We have our classifier (SVC), our feature extraction (PCA), and now,
+# We have our classifier (SVC), our feature selection (SelectKBest), and now,
 # we can plug them together in a *pipeline* that performs the two operations
 # successively:
 from sklearn.pipeline import Pipeline
-pca_svc = Pipeline([('pca', feature_extraction), ('svc', clf)])
+anova_svc = Pipeline([('anova', feature_selection), ('svc', clf)])
 
 # ### Fit and predict #########################################################
 from sklearn.metrics import precision_score
 
-# fit data, create new feature space transformation (model)
-pca_svc.fit(X, y)
+# fit data, create hyperplane (model)
+anova_svc.fit(X, y)
 
+# TODO: change precision to accuracy
 # predict samples' classes for TRAINING dataset
-y_pred = pca_svc.predict(X)
+y_pred = anova_svc.predict(X)
 precision_X = precision_score(y, y_pred)
 print('train dataset precision: %.2f' % (precision_X))
 
 # predict samples' classes for TESTING dataset
-y_pred_t = pca_svc.predict(X_t)
+y_pred_t = anova_svc.predict(X_t)
 precision_X_t = precision_score(y_t, y_pred_t)
 print('test dataset precision: %.2f' % (precision_X_t))
 
@@ -129,7 +151,7 @@ import numpy as np
 # ### Look at the discriminating weights
 coef = clf.coef_
 # reverse feature selection
-coef = feature_extraction.inverse_transform(coef)
+coef = feature_selection.inverse_transform(coef)
 
 # reverse masking
 coef = masking.unmask(coef[0], mask)
@@ -139,34 +161,8 @@ coef = masking.unmask(coef[0], mask)
 act = np.ma.masked_array(coef, coef == 0)
 
 
-plot_haxby(act, mean_img, 'PCA')
+plot_haxby(act, mean_img, 'SVC', slice=25)
 
 # save statistical map as nifti image
 img = nibabel.Nifti1Image(act, np.eye(4))
-img.to_filename('output_stats.nii.gz')
-
-# ### Visualisation (PCA) #####################################################
-
-Z = feature_extraction.transform(X)
-C = feature_extraction.transform(X_t)
-
-# plot data in 2D (i.e. plot two main components)
-import matplotlib.pyplot as plt
-for i in range(len(Z)):
-    if y[i] == 1:
-        marker = '^'
-        col = 'b'
-    else:
-        marker = 'o'
-        col = 'r'
-    plt.scatter(Z[i][0], Z[i][1], c=col, marker=marker, s=100)
-for i in range(len(C)):
-    if y_t[i] == 1:
-        marker = '^'
-        col = 'g'
-    else:
-        marker = 'o'
-        col = 'y'
-    plt.scatter(C[i][0], C[i][1], c=col, marker=marker, s=100)
-
-plt.show()
+img.to_filename('output_svc_selectkbest.nii.gz')
