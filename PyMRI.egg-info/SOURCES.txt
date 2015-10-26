@@ -7,10 +7,15 @@ PyMRI.egg-info/top_level.txt
 pymri/__init__.py
 pymri/dataset/__init__.py
 pymri/dataset/datasets.py
+pymri/dataset/nnadl_dataset.py
+pymri/dataset/theano_dataset.py
 pymri/model/__init__.py
-pymri/model/pymri.py
+pymri/model/fnn.py
+pymri/model/test_fnn.py
 pymri/model/visualisation.py
 pymri/utils/__init__.py
+pymri/utils/attributes.py
+pymri/utils/h5py_data.py
 pymri/utils/masking.py
 pymri/utils/merge_nifti.py
 pymri/utils/signal.py
