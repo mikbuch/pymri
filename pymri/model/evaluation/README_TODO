@@ -1,0 +1,5 @@
+1. leave-k samples X times cross validation implementation
+Clue:
+    use masking. Random choice till number of split (train-test) set is reached.
+    Then mask dataset to create corresponding train dataset and test dataset.
+    Use estimator to validate model X times.

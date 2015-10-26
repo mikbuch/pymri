@@ -1,0 +1,17 @@
+01. Parameters of the ANN to optimize:
+    01 number of neurons in hidden layer, 1:1024
+    02 eta, 0.001:4.096 (every 0.001)
+    03 minibatch size, 10:42
+
+ad 01.01
+math.pow(2, 10)
+
+ad 01.02
+math.pow(2, 12)
+
+ad 01.03
+math.pow(2, 5) + 10
+
+=====================
+= zusammen: 27 bits =
+=====================
