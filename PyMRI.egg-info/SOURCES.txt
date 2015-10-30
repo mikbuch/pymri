@@ -9,6 +9,8 @@ pymri/dataset/__init__.py
 pymri/dataset/datasets.py
 pymri/dataset/nnadl_dataset.py
 pymri/dataset/theano_dataset.py
+pymri/genetic_algorithm/__init__.py
+pymri/genetic_algorithm/fitness_functions.py
 pymri/model/__init__.py
 pymri/model/fnn.py
 pymri/model/test_fnn.py
