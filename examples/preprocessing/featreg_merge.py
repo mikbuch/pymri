@@ -33,7 +33,8 @@ merge = Node(
     )
 featreg_merge.connect(preproc, 'outputspec.highpassed_files', merge, 'in_files')
 
-featreg_merge.base_dir='/tmp/pre/working_dir'
+# TODO: add: create directory if it doesn't exist
+featreg_merge.base_dir='/tmp/working_dir'
 
 featreg_merge.write_graph("graph.dot")
 

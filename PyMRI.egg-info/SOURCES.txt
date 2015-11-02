@@ -5,10 +5,13 @@ PyMRI.egg-info/dependency_links.txt
 PyMRI.egg-info/requires.txt
 PyMRI.egg-info/top_level.txt
 pymri/__init__.py
+pymri/main_gui.py
 pymri/dataset/__init__.py
 pymri/dataset/datasets.py
 pymri/dataset/nnadl_dataset.py
 pymri/dataset/theano_dataset.py
+pymri/ev_conditions/__init__.py
+pymri/ev_conditions/ev_conditions.py
 pymri/genetic_algorithm/__init__.py
 pymri/genetic_algorithm/fitness_functions.py
 pymri/model/__init__.py
