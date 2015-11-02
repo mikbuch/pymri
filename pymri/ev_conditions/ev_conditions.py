@@ -51,8 +51,8 @@ def get_attributes(
 
     Examples
     --------
-    >>> from pymri.ev_conditions import merge_ev_files
-    >>> merge_ev_files('./dir_containing_EVs/', 2)
+    >>> from pymri.ev_conditions import get_attributes
+    >>> get_attributes('./dir_containing_EVs/', 2)
     """
 
     # store all time points with corresponding conditions
@@ -122,7 +122,7 @@ def get_attributes(
     evs = runs
 
     # write to file
-    with open('attributes_literal.txt', 'wb') as outfile:
+    with open(output_dir + 'attributes_literal.txt', 'wb') as outfile:
         csv_writer = csv.writer(outfile, delimiter=' ')
         for run in volumen_condition:
             csv_writer.writerows(run)
@@ -150,7 +150,7 @@ def get_attributes(
 
     # Write encoded conditions.
     # First number (column) is condition code, second column is run number.
-    with open('attributes.txt', 'wb') as outfile:
+    with open(output_dir + 'attributes.txt', 'wb') as outfile:
         csv_writer = csv.writer(outfile, delimiter=' ')
         for run in attributes:
             csv_writer.writerows(run)
