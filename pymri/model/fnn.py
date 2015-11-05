@@ -34,6 +34,8 @@ class Network(object):
         self.biases = [np.random.randn(y, 1) for y in sizes[1:]]
         self.weights = [np.random.randn(y, x)
                         for x, y in zip(sizes[:-1], sizes[1:])]
+        self.best_biases = self.biases
+        self.best_weights = self.weights
         self.best_score = 0
 
     def feedforward(self, a):
@@ -65,6 +67,8 @@ class Network(object):
                 score = self.evaluate(test_data)
                 if score > self.best_score:
                     self.best_score = score
+                    self.best_biases = self.biases
+                    self.best_weights = self.weights
                 print "Epoch {0}: {1} / {2}".format(
                     j, score, n_test)
             else:

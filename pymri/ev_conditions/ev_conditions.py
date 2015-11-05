@@ -62,6 +62,10 @@ def get_attributes(
     # source: http://stackoverflow.com/a/7099342
     paths = glob.glob(os.path.join(input_dir, '*'))
 
+    # if user forgot to specify dir
+    if output_dir[-1] != '/':
+        output_dir += '/'
+
     import csv
     import re
 

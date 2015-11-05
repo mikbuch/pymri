@@ -13,7 +13,8 @@ pymri/dataset/theano_dataset.py
 pymri/ev_conditions/__init__.py
 pymri/ev_conditions/ev_conditions.py
 pymri/genetic_algorithm/__init__.py
-pymri/genetic_algorithm/fitness_functions.py
+pymri/genetic_algorithm/fitness_inputs.py
+pymri/genetic_algorithm/fitness_params.py
 pymri/model/__init__.py
 pymri/model/fnn.py
 pymri/model/test_fnn.py

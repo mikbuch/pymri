@@ -9,7 +9,7 @@ __contact__ = "mikolaj.buchwald@gmail.com"
 import numpy as np
 
 
-def load_nifti(data_dir, Y):
+def load_nifti(data_dir, Y, k_features=784):
     '''
     Parameters
     ----------
@@ -105,7 +105,7 @@ def load_nifti(data_dir, Y):
     # ### Define the dimension reduction to be used.
     # Here we use a classical univariate feature selection based on F-test,
     # namely Anova. We set the number of features to be selected to 784
-    feature_selection = SelectKBest(f_classif, k=784)
+    feature_selection = SelectKBest(f_classif, k=k_features)
 
     feature_selection.fit(X, y)
     X = feature_selection.transform(X)
@@ -113,6 +113,10 @@ def load_nifti(data_dir, Y):
     # normalize data
     from sklearn import preprocessing
     X = preprocessing.normalize(X)
+
+    # scale data in range (0,1)
+    X = (X - X.min()) / (X.max() - X.min())
+
 
     X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 

@@ -2,6 +2,11 @@ import Tkinter
 import tkFont
 import tkFileDialog
 
+# TODO: Create working area frame, menu under it
+# TODO: Scrolling left and right in the entry
+# TODO: Wider entry
+# TODO: Ctrl+a to select all in entry
+
 def check_ev_frame():
     if var_ev.get():
         ev.grid(row=0, column=1, columnspan=10, sticky='W', \
@@ -20,9 +25,14 @@ def askdir_output():
     var_output.set(dir_chosen)
 
 def perform():
-    # TODO: check if EV is checked
+    # TODO: it is better to create a list of commands
+    # because program can go through all code in search for errors
     if var_ev.get():
-        from pymri.ev_conditions import 
+        from pymri.ev_conditions import get_attributes
+        var_tr = tr_entry.get()
+        input_dir = var_input.get()
+        output_dir = var_output.get()
+        get_attributes(input_dir=input_dir, tr=var_tr, output_dir=output_dir)
 
 
 
@@ -33,6 +43,7 @@ if __name__ == '__main__':
 
     getFld = Tkinter.IntVar()
     var_ev = Tkinter.IntVar() 
+
     var_input = Tkinter.StringVar(None)
     var_output = Tkinter.StringVar(None)
 

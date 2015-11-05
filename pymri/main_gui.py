@@ -30,7 +30,9 @@ def perform():
     if var_ev.get():
         from pymri.ev_conditions import get_attributes
         var_tr = tr_entry.get()
-        get_attributes(input_dir=var_input, tr=var_tr, output_dir=var_output)
+        input_dir = var_input.get()
+        output_dir = var_output.get()
+        get_attributes(input_dir=input_dir, tr=var_tr, output_dir=output_dir)
 
 
 
