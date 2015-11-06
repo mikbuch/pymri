@@ -28,8 +28,27 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 # def decode_bin(bin_list):
     # return int(''.join(map(str, bin_list)), 2)
  
-from pymri.model.test_fnn import perform
-net = perform(input_features=784)
+
+from pymri.dataset import load_nnadl_dataset
+path = '/home/jesmasta/amu/master/nifti/bold/'
+training_data, validation_data, test_data = load_nnadl_dataset(
+    path,
+    (('ExeTool_0', 'ExeTool_5'), ('ExeCtrl_0', 'ExeCtrl_5')),
+    k_features = 50,
+    normalize = True,
+    scale_0_1 = True,
+    sizes=(0.75, 0.25)
+    )
+
+from pymri.model import fnn
+decision = 'y'
+while decision == 'y':
+    net = fnn.Network([50, 25, 2])
+    net.SGD(training_data, 100, 11, 2.961, test_data=test_data)
+    print('\nBest score: %d' % (net.best_score))
+    print('Continue training? (y/n + enter)'),
+    decision = raw_input()
+    
 net.biases = net.best_biases
 net.weights = net.best_weights
 
@@ -38,7 +57,9 @@ net.weights = net.best_weights
 from pymri.genetic_algorithm import get_prob_class
 # the goal ('fitness') function to be maximized
 def evalOneMax(individual):
-    return get_prob_class(net, individual, 1),
+    return get_prob_class(
+        net, np.reshape(individual, (individual.shape[0], 1)), 0
+        ),
 
 # ----------
 # Operator registration
@@ -49,15 +70,12 @@ toolbox.register("evaluate", evalOneMax)
 # register the crossover operator
 toolbox.register("mate", tools.cxTwoPoint)
 
-# register a mutation operator with a probability to
-# flip each attribute/gene of 0.05
-toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
-
 # operator for selecting individuals for breeding the next
 # generation: each individual of the current generation
 # is replaced by the 'fittest' (best) of three individuals
 # drawn randomly from the current generation.
-toolbox.register("select", tools.selTournament, tournsize=3)
+# toolbox.register("select", tools.selTournament, tournsize=3)
+toolbox.register("select", tools.selRoulette)
 
 # ----------
 
@@ -68,7 +86,7 @@ def main():
 
     # create an initial population of 300 individuals (where
     # each individual is a list of integers)
-    pop = toolbox.population(n=6)
+    pop = toolbox.population(n=800)
 
     # CXPB  is the probability with which two individuals
     #       are crossed
@@ -77,7 +95,7 @@ def main():
     #
     # NGEN  is the number of generations for which the
     #       evolution runs
-    CXPB, MUTPB, NGEN = 0.5, 0.2, 8
+    CXPB, MUTPB, NGEN = 0.5, 0.8, 300
 
     mean_log = np.zeros(shape=(NGEN,))
     min_log = np.zeros(shape=(NGEN,))
@@ -118,7 +136,8 @@ def main():
 
             # mutate an individual with probability MUTPB
             if random.random() < MUTPB:
-                toolbox.mutate(mutant)
+
+                mutant[random.randint(0,len(mutant)-1)] = random.random()
                 del mutant.fitness.values
 
         # Evaluate the individuals with an invalid fitness
@@ -127,7 +146,8 @@ def main():
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
-        print("  Evaluated %i individuals" % len(invalid_ind))
+        # print("  Evaluated %i individuals" % len(invalid_ind))
+
 
         # The population is entirely replaced by the offspring
         pop[:] = offspring
@@ -140,10 +160,10 @@ def main():
         sum2 = sum(x*x for x in fits)
         std = abs(sum2 / length - mean**2)**0.5
 
-        print("  Min %s" % min(fits))
-        print("  Max %s" % max(fits))
-        print("  Avg %s" % mean)
-        print("  Std %s" % std)
+        # print("  Min %s" % min(fits))
+        # print("  Max %s" % max(fits))
+        # print("  Avg %s" % mean)
+        # print("  Std %s" % std)
         min_log[g] = min(fits)
         max_log[g] = max(fits)
         mean_log[g] = mean
@@ -157,8 +177,12 @@ def main():
     import matplotlib.pyplot as plt
     plt.plot(min_log)
     plt.plot(max_log)
-    plt.errorbar(np.arange(len(mean_log)), mean_log, yerr=std_log*3)
+    # plt.errorbar(np.arange(len(mean_log)), mean_log, yerr=std_log*3)
     plt.show()
+
 
 if __name__ == "__main__":
     main()
+
+a = toolbox.individual()
+z = evalOneMax(a)

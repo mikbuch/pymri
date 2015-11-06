@@ -9,7 +9,7 @@ __contact__ = "mikolaj.buchwald@gmail.com"
 import numpy as np
 
 
-def load_nifti(data_dir, Y, k_features=784):
+def load_nifti(data_dir, Y, k_features=784, normalize=True, scale_0_1=False):
     '''
     Parameters
     ----------
@@ -111,30 +111,35 @@ def load_nifti(data_dir, Y, k_features=784):
     X = feature_selection.transform(X)
 
     # normalize data
-    from sklearn import preprocessing
-    X = preprocessing.normalize(X)
+    if normalize:
+        from sklearn import preprocessing
+        X = preprocessing.normalize(X)
 
-    # # scale data in range (0,1)
-    # X = (X - X.min()) / (X.max() - X.min())
+    if scale_0_1:
+        # scale data in range (0,1)
+        X = (X - X.min()) / (X.max() - X.min())
 
-
+    # reshape is needed for nnadl acceptable format
     X = np.reshape(X, (X.shape[0], X.shape[1], 1))
 
     # how many classes do we have?
     n_classes = len(Y)
+    # [0, 1, 1] ==> [[1, 0], [0, 1], [0, 1]]
     y = convertToOneOfMany(y, n_classes)
     y = np.reshape(y, (y.shape[0], y.shape[1], 1))
 
-    return X, y
+    return X, y 
 
-def load_nnadl_dataset(data_dir, Y, sizes=(0.5, 0.25, 0.25)):
+def load_nnadl_dataset(
+    data_dir, Y, k_features, normalize, scale_0_1, sizes=(0.5, 0.25, 0.25)
+    ):
     """
 
     Datasets default proportions:
     (train/validation/test) (0.5/0.25/0.25)
     """
 
-    X, y = load_nifti(data_dir, Y)
+    X, y = load_nifti(data_dir, Y, k_features, normalize, scale_0_1)
 
     # ### Splitting ###########################################################
     from sklearn.cross_validation import train_test_split

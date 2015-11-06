@@ -1,4 +1,4 @@
-import pickle
+zrport pickle
 
 from pymri.dataset import load_nnadl_dataset
 
@@ -26,7 +26,7 @@ elif mode == 1:
         )
 
 def perform(input_features=784):
-    import fnn
+    from pymri.model import fnn
     # net = fnn.Network([784, 30, 2])
     # net.SGD(training_data, 100, 10, 3.0, test_data=test_data)
     net = fnn.Network([input_features, 46, 2])

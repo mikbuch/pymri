@@ -138,19 +138,20 @@ def get_attributes(
         'ExeTool_0': 5, 'ExeTool_5': 6, 'ExeCtrl_0': 7, 'ExeCtrl_5': 8
         }
 
+    # lowering conditions strings is required in case someone mistypes ev
+    # filename (it happens)
+    for key in conditions:
+        conditions[key.lower()] = conditions.pop(key)
+
     # change string values to specific integer code
     attributes = list(volumen_condition)
     for run in range(len(volumen_condition)):
-        for cond in conditions:
-            # the structure is [j for i in a]
-            # where: j is map(...), i is i and a is range(...)
-            attributes[run] = [
-                map(
-                    lambda x:x if x != cond else conditions[cond],
-                    attributes[run][i]
-                    )
-                for i in range(len(volumen_condition[run]))
-                ]
+        for vol in range(len(volumen_condition[run])):
+            # get the condition code (being string) and lower it to prevent
+            # errors if someone mistypes condition name
+            condition_code = volumen_condition[run][vol][0].lower()
+            attributes[run][vol] = \
+                [conditions[condition_code], run]
 
     # Write encoded conditions.
     # First number (column) is condition code, second column is run number.

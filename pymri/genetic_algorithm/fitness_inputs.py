@@ -11,8 +11,7 @@
 # evaluate individual:
 def get_prob_class(net, x, label):
     output_layer = net.feedforward(x)
-    prob_class = output_layer[0] - output_layer[1]
-    if label == 1:
-        return prob_class
-    else:
-        return 1 - (prob_class + output_layer[1])
+    # maximize prob_class
+    # abs(label-1) swithes between 0 and 1
+    prob_class = output_layer[label] - output_layer[abs(label-1)]
+    return prob_class[0]

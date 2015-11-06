@@ -49,6 +49,8 @@ if __name__ == '__main__':
 
     form.wm_title('PyMRI main window')
 
+    options = Tkinter.LabelFrame(form)
+
     evChk = Tkinter.Checkbutton(form, \
                text="Explanatory Variables (EVs)", onvalue=1, offvalue=0,
                command=check_ev_frame, variable=var_ev, font=standard_font,
