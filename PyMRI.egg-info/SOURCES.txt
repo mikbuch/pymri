@@ -2,6 +2,7 @@ setup.py
 PyMRI.egg-info/PKG-INFO
 PyMRI.egg-info/SOURCES.txt
 PyMRI.egg-info/dependency_links.txt
+PyMRI.egg-info/not-zip-safe
 PyMRI.egg-info/requires.txt
 PyMRI.egg-info/top_level.txt
 pymri/__init__.py

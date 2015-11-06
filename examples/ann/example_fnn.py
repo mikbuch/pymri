@@ -1,4 +1,4 @@
-zrport pickle
+import pickle
 
 from pymri.dataset import load_nnadl_dataset
 
@@ -12,6 +12,7 @@ if mode == 0:
         path,
         # (('ExeCtrl_0', 'ExeCtrl_5'), ('ExeTool_0', 'ExeTool_5')),
         (('ExeTool_0', 'ExeTool_5'), ('ExeCtrl_0', 'ExeCtrl_5')),
+        k_faetures = 784,
         sizes=(0.75, 0.25)
         )
 

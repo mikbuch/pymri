@@ -2,10 +2,10 @@ Metadata-Version: 1.0
 Name: PyMRI
 Version: 0.0.1
 Summary: PyMRI is tool for MRI and fMRI data analysis.
-Home-page: http://mikbuch.github.io/pymir
+Home-page: http://mikbuch.github.io/pymri
 Author: UNKNOWN
 Author-email: UNKNOWN
 License: BSD
 Description: UNKNOWN
-Keywords: MRI fMRI Machine_Learning
+Keywords: MRI fMRI Machine-Learning Artificial-Intelligence
 Platform: UNKNOWN

@@ -131,7 +131,7 @@ def load_nifti(data_dir, Y, k_features=784, normalize=True, scale_0_1=False):
     return X, y 
 
 def load_nnadl_dataset(
-    data_dir, Y, k_features, normalize, scale_0_1, sizes=(0.5, 0.25, 0.25)
+    data_dir, Y, k_features, normalize=True, scale_0_1=False, sizes=(0.5, 0.25, 0.25)
     ):
     """
 
