@@ -51,8 +51,6 @@ def load_nifti(
     import nibabel
     from sklearn.datasets.base import Bunch
 
-    data_dir = data_dir
-
     # create sklearn's Bunch of data
     dataset_files = Bunch(
         func=data_dir+'bold.nii.gz',
@@ -90,6 +88,7 @@ def load_nifti(
     X = fmri_data[..., condition_mask]
     y = y[condition_mask]
 
+    # adjust all labels to 0:n_classes range, e.g. [4,4,2,8,9] ==> [1,1,0,2,3]
     cnt = 0
     for val in np.unique(y):
         if val > cnt:
@@ -139,6 +138,8 @@ def load_nifti(
 
 def load_nnadl_dataset(
         data_dir, Y, k_features,
+        normalize=True,
+        scale_0_1=False,
         sizes=(0.5, 0.25, 0.25),
         theano=False
         ):
@@ -204,10 +205,8 @@ def load_nnadl_dataset(
 
 
 def vectorize(target, n_classes):
-    print(target)
     y = np.zeros(shape=(target.shape[0], n_classes))
 
     for sample in range(target.shape[0]):
         y[sample][target[sample]] = 1
-    print(y)
     return y

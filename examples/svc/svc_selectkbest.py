@@ -90,6 +90,8 @@ X, X_t, y, y_t = train_test_split(
 ###############################################################################
 from sklearn.feature_selection import f_classif
 f_values, p_values = f_classif(X, y)
+import pdb
+pdb.set_trace()
 p_values = -np.log10(p_values)
 p_values[np.isnan(p_values)] = 0
 p_values[p_values > 10] = 10

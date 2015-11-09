@@ -9,7 +9,11 @@ __contact__ = "mikolaj.buchwald@gmail.com"
 import numpy as np
 
 
-def load_nifti(data_dir, Y, k_features=784, normalize=True, scale_0_1=False):
+def load_nifti(
+        data_dir, Y, k_features=784,
+        normalize=True, scale_0_1=False,
+        vectorize_target=False, reshape=False
+        ):
     '''
     Parameters
     ----------
@@ -46,8 +50,6 @@ def load_nifti(data_dir, Y, k_features=784, normalize=True, scale_0_1=False):
     import numpy as np
     import nibabel
     from sklearn.datasets.base import Bunch
-
-    data_dir = data_dir
 
     # create sklearn's Bunch of data
     dataset_files = Bunch(
@@ -86,6 +88,7 @@ def load_nifti(data_dir, Y, k_features=784, normalize=True, scale_0_1=False):
     X = fmri_data[..., condition_mask]
     y = y[condition_mask]
 
+    # adjust all labels to 0:n_classes range, e.g. [4,4,2,8,9] ==> [1,1,0,2,3]
     cnt = 0
     for val in np.unique(y):
         if val > cnt:
@@ -119,31 +122,48 @@ def load_nifti(data_dir, Y, k_features=784, normalize=True, scale_0_1=False):
         # scale data in range (0,1)
         X = (X - X.min()) / (X.max() - X.min())
 
-    # reshape is needed for nnadl acceptable format
-    X = np.reshape(X, (X.shape[0], X.shape[1], 1))
+    if vectorize_target:
+        # how many classes do we have?
+        n_classes = len(Y)
+        # [0, 1, 1] ==> [[1, 0], [0, 1], [0, 1]]
+        y = vectorize(y, n_classes)
 
-    # how many classes do we have?
-    n_classes = len(Y)
-    # [0, 1, 1] ==> [[1, 0], [0, 1], [0, 1]]
-    y = convertToOneOfMany(y, n_classes)
-    y = np.reshape(y, (y.shape[0], y.shape[1], 1))
+    if reshape:
+        # reshape is needed for nnadl acceptable format
+        X = np.reshape(X, (X.shape[0], X.shape[1], 1))
+        y = np.reshape(y, (y.shape[0], y.shape[1], 1))
 
-    return X, y 
+    return X, y
+
 
 def load_nnadl_dataset(
-    data_dir, Y, k_features, normalize, scale_0_1, sizes=(0.5, 0.25, 0.25)
-    ):
+        data_dir, Y, k_features,
+        normalize=True,
+        scale_0_1=False,
+        sizes=(0.5, 0.25, 0.25),
+        theano=False
+        ):
     """
 
-    Datasets default proportions:
+    Datasets default proportions (sizes):
     (train/validation/test) (0.5/0.25/0.25)
     """
 
-    X, y = load_nifti(data_dir, Y, k_features, normalize, scale_0_1)
+    if theano:
+        reshape = False
+        vectorize_target = False
+
+    else:
+        reshape = True
+        vectorize_target = True
+
+    X, y = load_nifti(
+        data_dir, Y, k_features,
+        reshape=reshape, vectorize_target=vectorize_target
+        )
 
     # ### Splitting ###########################################################
     from sklearn.cross_validation import train_test_split
-
 
     # X, y - training dataset
     # X_v, y_v - validation dataset
@@ -163,7 +183,10 @@ def load_nnadl_dataset(
             X_v, y_v, test_size=test_size*2
             )
 
-        return zip(X, y), zip(X_v, y_v), zip(X_t, y_t)
+        if theano:
+            return (X, y), (X_v, y_v), (X_t, y_t)
+        else:
+            return zip(X, y), zip(X_v, y_v), zip(X_t, y_t)
 
     elif len(sizes) == 2:
 
@@ -175,15 +198,15 @@ def load_nnadl_dataset(
             X, y, train_size=train_size
             )
 
-        return zip(X, y), (['no_validation_set']), zip(X_t, y_t)
+        if theano:
+            return (X, y), (['no_validation_set']), (X_t, y_t)
+        else:
+            return zip(X, y), (['no_validation_set']), zip(X_t, y_t)
 
 
-
-def convertToOneOfMany(target, n_classes):
-    print(target)
+def vectorize(target, n_classes):
     y = np.zeros(shape=(target.shape[0], n_classes))
 
     for sample in range(target.shape[0]):
         y[sample][target[sample]] = 1
-    print(y)
     return y

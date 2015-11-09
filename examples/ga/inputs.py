@@ -12,8 +12,8 @@ from deap import tools
 # number of features (to be extracted, selected) it is equal to number of
 # inputs of the ann as well as number of elements of the vector being
 # the individual, member of the population for genetic algorithm
-k_features = 50
-hidden_neurons = 25
+k_features = 784*2
+hidden_neurons = 46*2
 
 # #### DatastManager initialization
 
@@ -23,9 +23,9 @@ from pymri.dataset import DatasetManager
 # dataset settings
 ds = DatasetManager(
     path_input='/home/jesmasta/amu/master/nifti/bold/',
-    contrast=(('ExeTool_0', 'ExeTool_5'), ('ExeCtrl_0', 'ExeCtrl_5')),
+    contrast=(('PlanTool_0', 'PlanTool_5'), ('PlanCtrl_0', 'PlanCtrl_5')),
     k_features = k_features,
-    normalize = True,
+    # normalize = True,
     # scale_0_1 = True,
     nnadl = True,
     sizes=(0.75, 0.25)
@@ -34,6 +34,7 @@ ds = DatasetManager(
 ds.load_data()
 
 # select feature reduction method
+# ds.feature_reduction(roi_selection='RBM')
 ds.feature_reduction(roi_selection='SelectKBest')
 
 # get training, validation and test datasets for specified roi
@@ -114,11 +115,11 @@ toolbox.register("select", tools.selRoulette)
 
 
 def main():
-    random.seed(64)
+    # random.seed(64)
 
     # create an initial population of 300 individuals (where
     # each individual is a list of integers)
-    pop = toolbox.population(n=800)
+    pop = toolbox.population(n=20)
 
     # CXPB  is the probability with which two individuals
     #       are crossed
@@ -127,7 +128,7 @@ def main():
     #
     # NGEN  is the number of generations for which the
     #       evolution runs
-    CXPB, MUTPB, NGEN = 0.5, 0.8, 10
+    CXPB, MUTPB, NGEN = 0.5, 0.8, 200
 
     mean_log = np.zeros(shape=(NGEN,))
     min_log = np.zeros(shape=(NGEN,))
@@ -207,9 +208,18 @@ def main():
 
     # visualize evolution
     import matplotlib.pyplot as plt
-    plt.plot(min_log)
-    plt.plot(max_log)
+    plt.subplot(211)
+    plt.plot(max_log, c='r', label='max fitness')
+    plt.plot(mean_log, label='mean fitness')
     # plt.errorbar(np.arange(len(mean_log)), mean_log, yerr=std_log*3)
+    plt.ylim(-0.1, 1.1)
+    plt.legend(loc=3)
+    plt.subplot(212)
+    plt.plot(max_log, label='max fitness')
+    plt.ylim(
+        max_log.min()-0.01*max_log.min(), max_log.max() + 0.01*max_log.max()
+        )
+    plt.legend(loc=3)
     plt.show()
 
     ############################################
@@ -217,14 +227,18 @@ def main():
     #   SAVE ACTIVATION PATTERN AS NIFTI
     #
     ############################################
-    activation = np.array(best_ind)
+    fluctuation = np.array(best_ind)
+    activation = np.array(fluctuation)
+    deactivation = np.array(activation)
+    deactivation[activation > 0] = 0
+    deactivation = -deactivation
+    activation[activation < 0] = 0
 
     # save activation to nifti file
+    ds.save_as_nifti(fluctuation, 'prototype_fluctuation')
     ds.save_as_nifti(activation, 'prototype_activation')
+    ds.save_as_nifti(deactivation, 'prototype_deactivation')
 
 
 if __name__ == "__main__":
     main()
-
-a = toolbox.individual()
-z = evalOneMax(a)

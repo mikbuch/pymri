@@ -1,237 +1,324 @@
-from __future__ import print_function
-import os
-import csv
-import nibabel as nib
+"""
+neural-networks-and-deep-learning dataset generation (transformation)
+"""
+
+__author__ = "Mikolaj Buchwald"
+__contact__ = "mikolaj.buchwald@gmail.com"
+
+
 import numpy as np
-import math
-# import psutil
-from ram.ram_usage_proc import usage_print
+import nibabel
+from sklearn.datasets.base import Bunch
+# from utils import masking, signal
+from pymri.utils import masking
+from nibabel import Nifti1Image
 
 
-class RawDataset(object):
-    def __init__(self, dir_paradigm=None, nifti_locations=None, tr=None):
-        self.tr = tr
-        self.dir_paradigm = dir_paradigm
-        if self.dir_paradigm is not None:
-            self.paradigm_volumens = self.paradigm_sec_to_vol()
-        else:
-            self.paradigm_volumens = None
+class DatasetManager(object):
 
-        self.nifti_locations = nifti_locations
-        if nifti_locations is not None:
-            self.nifti_list = \
-                [line.rstrip('\n') for line in open(self.nifti_locations)]
-        else:
-            self.nifti_list = None
+    def __init__(
+            self,
+            contrast,
+            path_input='./',
+            path_output='./',
+            k_features=784,
+            normalize=True,
+            scale_0_1=False,
+            nnadl=False,
+            vectorize_target=False,
+            sizes=(0.75, 0.25)
+            ):
 
-        self.paradigm_seconds = None
+        self.contrast = contrast
+        self.path_input = path_input
+        self.path_output = path_output
+        self.k_features = k_features
+        self.normalize = normalize
+        self.scale_0_1 = scale_0_1
+        self.nnadl = nnadl
+        self.vectorize_target = vectorize_target
+        self.sizes = sizes
 
-        self.single_run_shape = None
-        self.single_vol_shape = None
-        self.masked_vol_shape = None
-        self.raw_data = None
-        self.raw_data_category = None
+        self.feature_reduction_method = None
+        self.mask_non_brain = None
 
-    # read first cell of the txt file (to get info when condition begins)
-    def read_first_cell(self, condition_absolute_path, delimiter='\t'):
-        with open(condition_absolute_path, 'rb') as f:
-            mycsv = csv.reader(f, delimiter=delimiter)
-            return list(mycsv)[0][0]
+        self.training_data_max = None
+        self.training_data_min = None
 
-    def get_paradigm(self):
+        self.X_raw = None
+        self.X_processed = None
+        self.y = None
 
-        subdirectories = os.listdir(self.dir_paradigm)
-        subdirectories.sort()
+    def load_data(self):
 
-        conditions = os.listdir(self.dir_paradigm + '/' + subdirectories[0])
-        conditions.sort()
-
-        # print(*subdirectories, sep='\n')
-        # print(*conditions, sep='\n')
-
-        paradigm = []
-
-        for subdir in subdirectories:
-            paradigm.append([])
-            for cond in conditions:
-                paradigm[-1].append(
-                    self.read_first_cell(
-                        self.dir_paradigm + '/' + subdir + '/' + cond
-                        )
-                    )
-
-        return paradigm
-
-    def paradigm_sec_to_vol(self):
-        self.paradigm_seconds = self.get_paradigm()
-
-        paradigm_volumens = []
-        for task in self.paradigm_seconds:
-            paradigm_volumens.append([])
-            for cond in task:
-                paradigm_volumens[-1].append(math.ceil(float(cond)/self.tr))
-
-        return paradigm_volumens
-
-    def get_raw_data(self):
-
-        # transform to array one nifti file to get data shape
-        img_tmp = nib.load(self.nifti_list[0])
-        self.single_run_shape = img_tmp.shape[::-1]
-        self.single_vol_shape = self.single_run_shape[1:]
-
-        # how many samples will we get (number_of_runs*nb_classes*volumens)
-        samples_num = len(self.nifti_list)*2*8
-
-        usage_print()
-        data_two_shape = self.single_run_shape[:0] + \
-            (samples_num,) + \
-            self.single_run_shape[1:]
-
-        usage_print()
-        data_two_classes = np.zeros(data_two_shape)
-        data_two_classes_category = np.zeros(samples_num)
-
-        sample_cnt = 0
-
-        # create 5D array containing all runs
-        for run in range(len(self.nifti_list)):
-            print('run: %d/%d' % (run+1, len(self.nifti_list)))
-            print('sample_counter: %d' % (sample_cnt))
-            img_tmp = nib.load(self.nifti_list[run])
-            img_tmp = img_tmp.get_data().T
-            usage_print()
-
-            # get only two classes from whole dataset (based on
-            # paradigm_volumens) only 8 volumes per class per run are valid
-            # that gives 16 volumens of 2 classes per run and 192 volumens
-            # per sub
-
-            for img in (range(len(img_tmp))):
-                # print('    img: %d/%d' % (img+1, len(img_tmp)))
-                if img >= self.paradigm_volumens[run][0] and \
-                        img < self.paradigm_volumens[run][0]+8:
-                            data_two_classes[sample_cnt] = \
-                                img_tmp[img]
-                            data_two_classes_category[sample_cnt] = 0
-                            sample_cnt += 1
-                            # print(paradigm_volumens[run][0])
-                if img >= self.paradigm_volumens[run][-1] and \
-                        img < self.paradigm_volumens[run][-1]+8:
-                            data_two_classes[sample_cnt] = \
-                                img_tmp[img]
-                            data_two_classes_category[sample_cnt] = 1
-                            sample_cnt += 1
-                            # print(paradigm_volumens[run][-1])
-
-        return data_two_classes, data_two_classes_category
-
-    def get_raw_data_masked(self, mask_nifti):
-
-        mask = nib.load(mask_nifti).get_data()
-        mask = mask.astype(bool)
-
-        self.masked_vol_shape = np.sum(mask)
-
-        # how many samples will we get (number_of_runs*nb_classes*volumens)
-        samples_num = len(self.nifti_list)*2*8
-
-        data_two_shape = (samples_num,) + (self.masked_vol_shape,)
-
-        usage_print()
-        data_two_classes = np.zeros(data_two_shape)
-        data_two_classes_category = np.zeros(samples_num)
-        usage_print()
-
-        sample_cnt = 0
-
-        # create 2D array containing all runs
-        for run in range(len(self.nifti_list)):
-            print('run: %d/%d' % (run+1, len(self.nifti_list)))
-            print('sample_counter: %d' % (sample_cnt))
-            func_data = nib.load(self.nifti_list[run]).get_data()
-            X = func_data[mask].T
-            usage_print()
-
-            # 0 is houses, 7 is faces
-            for i in (0, 7):
-                vol_start = self.paradigm_volumens[run][i]
-                data_two_classes[sample_cnt:sample_cnt+8] = \
-                    X[vol_start:vol_start+8]
-                if i == 0:
-                    class_bin = 0
-                else:
-                    class_bin = 1
-                data_two_classes_category[sample_cnt:sample_cnt+8] = \
-                    class_bin
-                print('%d:%d' % (sample_cnt, sample_cnt+8))
-                sample_cnt += 8
-
-        return data_two_classes, data_two_classes_category
-
-    '''
-        transform data from nifti format to np.array using nibabel
-    '''
-    def nifti_to_array_4D(self):
-
-        self.raw_data, self.raw_data_category = self.get_raw_data()
-
-        # return self.raw_data, self.raw_data_category
-
-    def nifti_to_array_masked(self, nifti_mask):
-
-        self.raw_data, self.raw_data_category = self.get_raw_data_masked(
-            nifti_mask
+        # create sklearn's Bunch of data
+        dataset_files = Bunch(
+            func=self.path_input+'bold.nii.gz',
+            session_target=self.path_input+'attributes.txt',
+            mask=self.path_input+'mask.nii.gz',
+            conditions_target=self.path_input+'attributes_literal.txt'
             )
 
-        # return self.raw_data, self.raw_data_category
-
-
-def get_categories(
-        nifti_paths,
-        session_target,
-        conditions_target,
-        shape_output=None
-        ):
-    '''
-        Use sklearn.dataset.base Bunch to combine particular subject's runs
-        into one dataset containing only choosen classes.
-
-        Particular run, registered to MNI_152 standard space, has
-        shape=(91,109,91,121), so 12 runs combained together has
-        shape(91,109,91,1452) this is far too more values to store in my RAM.
-        Therefore I get one run a time and get from it classes (categories,
-        conditions) that I need. So the final array, containing 2 classes, has
-        shape=(91,109,91,216).
-    '''
-
-    nifti_list = [line.rstrip('\n') for line in open(nifti_paths)]
-    session_list = [line.rstrip('\n') for line in open(session_target)]
-    conditions_list = [line.rstrip('\n') for line in open(conditions_target)]
-
-    dataset_complete = np.zeros(shape=shape_output)
-    dataset_targets = np.zeros(shape=shape_output[-1])
-
-    for run in range(len(nifti_list)):
-        print(nifti_list[run])
-        bold_img = nib.load(nifti_list[run])
+        # fmri_data and mask are copied to break reference to
+        # the original object
+        bold_img = nibabel.load(dataset_files.func)
         fmri_data = bold_img.get_data().astype(float)
         affine = bold_img.get_affine()
+        y, session = np.loadtxt(dataset_files.session_target).astype("int").T
+        conditions = np.recfromtxt(dataset_files.conditions_target)['f0']
+        mask = dataset_files.mask
+        self.mask_non_brain = mask
 
-        y, session = np.loadtxt(session_list[run]).astype("int").T
-        conditions = np.recfromtxt(conditions_list[run])['f0']
+        # ### Restrict to specified conditions
+        condition_mask = np.zeros(shape=(conditions.shape[0]))
 
-        # ### Restrict to faces and houses
-        condition_mask = np.logical_or(
-            conditions == 'face', conditions == 'house'
-            )
+        # unifrom contrasts, e.g.: contrast=(('face', 'table'), 'house')):
+        # face:0, table:1, house:2
+        # [0, 0, 2, 1, 2, 0, 1, 1] ==> [0, 0, 2, 0, 2, 0, 0, 0]
+        for n in self.contrast:
+            if type(n) == tuple:
+                # first label
+                k_uniform = n[0]
+                k_uniform = y[conditions == k_uniform][0]
+                for k in n:
+                    condition_mask += conditions == k
+                    # unifying subclasses into one class
+                    # (string label doesn't matter)
+                    y[conditions == k] = k_uniform
+            else:
+                condition_mask += conditions == n
 
+        condition_mask = np.array(condition_mask, dtype=bool)
         X = fmri_data[..., condition_mask]
         y = y[condition_mask]
 
-        # get info which 18'th is that
-        print('%d, %d' % (run*18, run*18+18))
-        dataset_complete[..., run*18:run*18+18] = X
-        dataset_targets[..., run*18:run*18+18] = y
+        # adjust all (target) labels to  range(0:n_classes range),
+        # e.g. [4,4,2,8,9] ==> [1,1,0,2,3]
+        # e.g. [0, 0, 2, 0, 2, 0, 0, 0] ==> [0, 0, 1, 0, 1, 0, 0, 0]
+        cnt = 0
+        for val in np.unique(y):
+            if val > cnt:
+                y[y == val] = cnt
+            cnt += 1
 
-    return dataset_complete, dataset_targets, affine
+        # ### Masking step
+
+        # Mask data using brain mask (remove non-brain regions)
+        X_img = Nifti1Image(X, affine)
+        X = masking.apply_mask(X_img, mask, smoothing_fwhm=4)
+        # X = signal.clean(X, standardize=True, detrend=False)
+
+        print('##############################')
+        print('# dataset loaded successfully ')
+        print('# X shape: %s' % str(X.shape))
+        print('# y shape: %s' % str(y.shape))
+        print('##############################')
+        self.X_raw, self.y = X, y
+
+    def feature_reduction(self, roi_selection):
+
+        if roi_selection is None:
+            print('ROI selection method has to be specified'),
+            print('Available values are: \'SelectKBest\', \'PCA\','),
+            print('or \'path_to_roi_mask\'\n')
+
+        # Array being processed will be loaded raw data
+        X = self.X_raw
+        # target
+        y = self.y
+
+        # ROI selection (feature reduction) method to be applied
+        if roi_selection == 'SelectKBest':
+            X = self._SelectKBest(X, y)
+        elif roi_selection == 'PCA':
+            X = self._PCA(X, y)
+        elif roi_selection == 'RBM':
+            X = self._RBM(X, y)
+        else:
+            X = self._roi_mask_apply(X, roi_selection)
+
+        # normalize if set
+        if self.normalize:
+            X = self._normalize(X)
+
+        # scale in range(0,1) if set
+        if self.scale_0_1:
+            X = self._scale_0_1(X)
+
+        self.X_processed = X
+
+        if self.nnadl:
+            self.nnadl_prep()
+        else:
+            if self.vectorize_target:
+                # how many classes do we have?
+                n_classes = len(self.contrast)
+                # vectorize target (labels), aka ConvertToOneOfMany
+                # e.g. [0, 1, 1] ==> [[1, 0], [0, 1], [0, 1]]
+                self.y = self.vectorize(self.y, n_classes)
+
+    def _normalize(self, X):
+        from sklearn import preprocessing
+        X = preprocessing.normalize(X)
+        return X
+
+    def _scale_0_1(self, X):
+        # scale data in range (0,1)
+        X = (X - X.min()) / (X.max() - X.min())
+        return X
+
+    def _SelectKBest(self, X, y):
+        from sklearn.feature_selection import SelectKBest, f_classif
+
+        # ### Define the dimension reduction to be used.
+        # Here we use a classical univariate feature selection based on F-test,
+        # namely Anova. The number of features to be selected is set to 784
+        feature_selection = SelectKBest(f_classif, k=self.k_features)
+
+        feature_selection.fit(X, y)
+        X = feature_selection.transform(X)
+
+        self.feature_reduction_method = feature_selection
+
+        return X
+
+    def _PCA(self, X, y):
+
+        if X.shape[0] >= self.k_features:
+            print('PCA fits only when number of features to be extracted')
+            print('is less than number of samples.')
+
+        from sklearn.decomposition import PCA
+
+        # PCA model creation, number of components
+        # feature extraction method. Used here (after sampling) because we are
+        # creating an universal model and not this_dataset-specific.
+        feature_extraction = PCA(n_components=self.k_features)
+
+        feature_extraction.fit(X, y)
+        X = feature_extraction.transform(X)
+
+        self.feature_reduction_method = feature_extraction
+
+        return X
+
+    def _RBM(self, X, y):
+
+        from sklearn.neural_network import BernoulliRBM
+
+        # PCA model creation, number of components
+        # feature extraction method. Used here (after sampling) because we are
+        # creating an universal model and not this_dataset-specific.
+        neural_network = BernoulliRBM(n_components=self.k_features)
+
+        neural_network.fit(X, y)
+        X = neural_network.transform(X)
+
+        self.feature_reduction_method = neural_network
+
+        return X
+
+    # TODO: finish this one
+    def _roi_mask_apply(self, X, roi_mask_img):
+
+        # roi_mask_img = nibabel.load(roi_mask_img)
+
+        roi_mask = masking.apply_mask(roi_mask_img, self.mask_non_brain)
+        roi_mask = roi_mask.astype(bool)
+
+        X = X[..., roi_mask]
+
+        self.feature_reduction_method = roi_mask
+
+        return X
+
+    def split_data(self):
+        # ### Splitting #######################################################
+        from sklearn.cross_validation import train_test_split
+
+        # X, y - training dataset
+        # X_v, y_v - validation dataset
+        # X_t, y_t - test dataset
+
+        if len(self.sizes) == 3:
+            train_size, valid_size, test_size = self.sizes
+
+            # split original dataset into training phase (dataset) and
+            # validation phase
+            X, X_v, y, y_v = train_test_split(
+                self.X_processed, self.y, train_size=train_size
+                )
+
+            # split validation phase into validation dataset and test dataset
+            X_v, X_t, y_v, y_t = train_test_split(
+                X_v, y_v, test_size=test_size*2
+                )
+
+            self.training_data_max = X.max()
+            self.training_data_min = X.min()
+
+            return zip(X, y), zip(X_v, y_v), zip(X_t, y_t)
+
+        elif len(self.sizes) == 2:
+
+            train_size, test_size = self.sizes
+
+            # split original dataset into training phase (dataset) and
+            # validation phase
+            X, X_t, y, y_t = train_test_split(
+                self.X_processed, self.y, train_size=train_size
+                )
+
+            self.training_data_max = X.max()
+            self.training_data_min = X.min()
+
+            return zip(X, y), (['no_validation_set']), zip(X_t, y_t)
+
+    def nnadl_prep(self):
+        ''' Neural networks and deep learning tutorial data preparation
+        '''
+
+        X = self.X_processed
+        y = self.y
+
+        # how many classes do we have?
+        n_classes = len(self.contrast)
+        # [0, 1, 1] ==> [[1, 0], [0, 1], [0, 1]]
+        y = self.vectorize(y, n_classes)
+
+        # reshape is needed for nnadl acceptable format
+        X = np.reshape(X, (X.shape[0], X.shape[1], 1))
+        y = np.reshape(y, (y.shape[0], y.shape[1], 1))
+
+        self.X_processed = X
+        self.y = y
+
+    def vectorize(self, target, n_classes):
+        y = np.zeros(shape=(target.shape[0], n_classes))
+
+        for sample in range(target.shape[0]):
+            y[sample][target[sample]] = 1
+        return y
+
+    def save_as_nifti(self, activation, filename):
+        # care about the file extension
+        if filename.endswith('.nii'):
+            filename += '.gz'
+        elif filename.endswith('nii.gz'):
+            pass
+        else:
+            filename += '.nii.gz'
+
+        # reverse feature reduction operation
+        if type(self.feature_reduction_method) == str:
+            activation = masking.unmask(self.feature_reduction_method)
+        else:
+            activation = self.feature_reduction_method.inverse_transform(
+                activation
+                )
+
+        # reverse non-brain regions masking
+        activation = masking.unmask(activation, self.mask_non_brain)
+
+        img = nibabel.Nifti1Image(activation, np.eye(4))
+        img.to_filename(filename)
