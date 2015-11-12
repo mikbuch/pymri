@@ -17,8 +17,6 @@ hidden_neurons = 46*2
 
 # #### DatastManager initialization
 
-# TODO: QUESTION: can I scale the values in range 0:1?
-
 from pymri.dataset import DatasetManager
 # dataset settings
 ds = DatasetManager(
@@ -119,7 +117,7 @@ def main():
 
     # create an initial population of 300 individuals (where
     # each individual is a list of integers)
-    pop = toolbox.population(n=20)
+    pop = toolbox.population(n=10)
 
     # CXPB  is the probability with which two individuals
     #       are crossed
@@ -128,7 +126,7 @@ def main():
     #
     # NGEN  is the number of generations for which the
     #       evolution runs
-    CXPB, MUTPB, NGEN = 0.5, 0.8, 200
+    CXPB, MUTPB, NGEN = 0.1, 0.8, 400
 
     mean_log = np.zeros(shape=(NGEN,))
     min_log = np.zeros(shape=(NGEN,))
@@ -139,6 +137,7 @@ def main():
 
     # Evaluate the entire population
     fitnesses = list(map(toolbox.evaluate, pop))
+    print(fitnesses)
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
 
@@ -176,6 +175,8 @@ def main():
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         fitnesses = map(toolbox.evaluate, invalid_ind)
+        print('\ngen: %d' % g)
+        print(fitnesses)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
@@ -216,6 +217,7 @@ def main():
     plt.legend(loc=3)
     plt.subplot(212)
     plt.plot(max_log, label='max fitness')
+    plt.plot(mean_log, label='mean fitness')
     plt.ylim(
         max_log.min()-0.01*max_log.min(), max_log.max() + 0.01*max_log.max()
         )

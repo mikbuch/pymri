@@ -1,29 +1,7 @@
 '''
-NOTICE: first masks (methods of feature selection/extraction) has to be chosen
-
-1. Load data.
-2. Choose ROIs (masks) to compare (n>=2).
-3. Create model (classifier).
-4. Train, test (and cross-validate) classifier using n-times masked data.
-6. Compare performance of the classifier for diffrent ROIs -
-the better classification, the more important the region is for
-particular task.
-
-Conclusion: The best classification was achieved using ROI that is crucial
-in performing cognitive task.
-'''
-
-'''
-k_features - only if automatic selection chosen: how many features do we take
+qda_cross_valid.py
 '''
 k_features = 784
-hidden_neurons = 46
-epochs = 300
-minibatch_size = 11
-eta = 2.95
-
-# perform LeavePOut n times
-n_times_LeavePOut = 30
 
 
 ###############################################################################
@@ -37,8 +15,7 @@ ds = DatasetManager(
     path_input='/home/jesmasta/amu/master/nifti/bold/',
     contrast=(('PlanTool_0', 'PlanTool_5'), ('PlanCtrl_0', 'PlanCtrl_5')),
     k_features = k_features,
-    normalize = True,
-    nnadl = True,
+    normalize = False,
     sizes=(0.75, 0.25)
     )
 # load data
@@ -53,7 +30,6 @@ roi_selection = ('SelectKBest', 'PCA')
 
 # select feature reduction method
 ds.feature_reduction(roi_selection='SelectKBest')
-# ds.feature_reduction(roi_selection='/amu/master/nifti/bold/roi_mask_plan.nii.gz')
 
 k_features = ds.X_processed.shape[1]
 print(k_features)
@@ -80,10 +56,13 @@ features. Default is 784.
 #
 ###############################################################################
 
-import numpy as np
-accuracies = np.zeros(shape=(n_times_LeavePOut,))
+# perform LeavePOut n times
+n = 100
 
-for i in range(n_times_LeavePOut):
+import numpy as np
+accuracies = np.zeros(shape=(n,))
+
+for i in range(n):
 
     print('testing iteration: %d' % i)
 
@@ -101,15 +80,18 @@ for i in range(n_times_LeavePOut):
     #        CREATE MODEL
     #
     ###########################################################################
-    # artificial neural network
-    from pymri.model import fnn
 
-    net = fnn.Network([k_features, hidden_neurons, 2])
-    # train and test network
-    net.SGD(training_data, epochs, minibatch_size, eta, test_data=test_data)
 
+    # Define the estimator: quadratic discriminant analysis
+    from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+    qda = QuadraticDiscriminantAnalysis()
+
+    qda.fit(training_data[0], training_data[1])
+
+    from sklearn.metrics import accuracy_score
     # record the best result
-    accuracies[i] = net.best_score/float(len(test_data))
+    accuracies[i] = accuracy_score(test_data[1], qda.predict(test_data[0]))
+
 
 mean_accuracy = accuracies.mean()
 print('\n\nmean accuracy: %f' % mean_accuracy)
@@ -121,8 +103,8 @@ print('\n\nmean accuracy: %f' % mean_accuracy)
 ###############################################################################
 import matplotlib.pyplot as plt
 
-mean_accuracies = np.zeros(shape=(n_times_LeavePOut,))
-for i in range(n_times_LeavePOut):
+mean_accuracies = np.zeros(shape=(n,))
+for i in range(n):
     mean_accuracies[i] = accuracies[:i+1].mean()
 
 # plot best accuracy for particular validation

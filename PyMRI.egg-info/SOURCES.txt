@@ -19,6 +19,7 @@ pymri/genetic_algorithm/fitness_params.py
 pymri/model/__init__.py
 pymri/model/fnn.py
 pymri/model/fnn2.py
+pymri/model/network3.py
 pymri/model/test_fnn.py
 pymri/model/test_fnn2.py
 pymri/model/visualisation.py

@@ -30,6 +30,9 @@ class DatasetManager(object):
             ):
 
         self.contrast = contrast
+        # user has to specify directory
+        if not path_input.endswith('/'):
+            path_input += '/'
         self.path_input = path_input
         self.path_output = path_output
         self.k_features = k_features
@@ -257,7 +260,10 @@ class DatasetManager(object):
             self.training_data_max = X.max()
             self.training_data_min = X.min()
 
-            return zip(X, y), zip(X_v, y_v), zip(X_t, y_t)
+            if self.nnadl:
+                return zip(X, y), zip(X_v, y_v), zip(X_t, y_t)
+            else:
+                return (X, y), (X_v, y_v), (X_t, y_t)
 
         elif len(self.sizes) == 2:
 
@@ -272,7 +278,10 @@ class DatasetManager(object):
             self.training_data_max = X.max()
             self.training_data_min = X.min()
 
-            return zip(X, y), (['no_validation_set']), zip(X_t, y_t)
+            if self.nnadl:
+                return zip(X, y), (['no_validation_set']), zip(X_t, y_t)
+            else:
+                return (X, y), (['no_validation_set']), (X_t, y_t)
 
     def nnadl_prep(self):
         ''' Neural networks and deep learning tutorial data preparation
