@@ -73,7 +73,7 @@ for i in range(n):
     ###########################################################################
 
     # get training, validation and test datasets for specified roi
-    training_data, validation_data, test_data = ds.split_data()
+    training_data, test_data = ds.split_data()
 
     ###########################################################################
     #

@@ -1,4 +1,4 @@
-import Tkinter
+import Tkinter as tk
 import tkFont
 import tkFileDialog
 
@@ -37,30 +37,31 @@ def perform():
 
 
 if __name__ == '__main__':
-    form = Tkinter.Tk()
+    form = tk.Tk()
+    form.geometry('{}x{}'.format(1700, 500))
     font_size=12
     standard_font = tkFont.Font(size=font_size)
 
-    getFld = Tkinter.IntVar()
-    var_ev = Tkinter.IntVar() 
+    getFld = tk.IntVar()
+    var_ev = tk.IntVar() 
 
-    var_input = Tkinter.StringVar(None)
-    var_output = Tkinter.StringVar(None)
+    var_input = tk.StringVar(None)
+    var_output = tk.StringVar(None)
 
     form.wm_title('PyMRI main window')
 
-    options = Tkinter.LabelFrame(form)
 
-    evChk = Tkinter.Checkbutton(form, \
+    evChk = tk.Checkbutton(form, \
                text="Explanatory Variables (EVs)", onvalue=1, offvalue=0,
                command=check_ev_frame, variable=var_ev, font=standard_font,
                )
     evChk.grid(row=0, column=0, columnspan=5, padx=10, pady=10, sticky='W')
 
-    ev = Tkinter.LabelFrame(
+    ev = tk.LabelFrame(
         form, borderwidth = font_size/6,
         text=" Explanatory Variables (EVs): ", font=standard_font,
         )
+
 
     ###########################################################################
     #
@@ -69,17 +70,17 @@ if __name__ == '__main__':
     ###########################################################################
 
     # Input ###################################################################
-    inFileLbl = Tkinter.Label(
+    inFileLbl = tk.Label(
         ev, text="Select input directory:", font=standard_font
         )
     inFileLbl.grid(row=0, column=0, columnspan=2, sticky='E', padx=5, pady=2)
 
-    inFileTxt = Tkinter.Entry(
+    inFileTxt = tk.Entry(
         ev, width=40, font=standard_font, textvariable=var_input
         )
     inFileTxt.grid(row=0, column=2, columnspan=8, sticky="WE", pady=3)
 
-    inFileBtn = Tkinter.Button(
+    inFileBtn = tk.Button(
         ev,
         command=askdir_input,
         text="Browse ...", font=standard_font
@@ -87,27 +88,27 @@ if __name__ == '__main__':
     inFileBtn.grid(row=0, column=10, sticky='W', padx=5, pady=2)
 
     # Output ###################################################################
-    outFileLbl = Tkinter.Label(
+    outFileLbl = tk.Label(
         ev, text="Select output directory:", font=standard_font
         )
     outFileLbl.grid(row=1, column=0, columnspan=2, sticky='E', padx=5, pady=2)
 
-    outFileTxt = Tkinter.Entry(
+    outFileTxt = tk.Entry(
         ev, width=40, font=standard_font, textvariable=var_output
         )
     outFileTxt.grid(row=1, column=2, columnspan=8, sticky="WE", pady=2)
 
-    outFileBtn = Tkinter.Button(
+    outFileBtn = tk.Button(
         ev,
         command=askdir_output,
         text="Browse ...", font=standard_font
         )
     outFileBtn.grid(row=1, column=10, sticky='W', padx=5, pady=2)
 
-    tr_label = Tkinter.Label(ev, text="TR (s):", font=standard_font)
+    tr_label = tk.Label(ev, text="TR (s):", font=standard_font)
     tr_label.grid(row=2, column=0, sticky='E', padx=5, pady=2)
 
-    tr_entry = Tkinter.Entry(ev, width=4, font=standard_font)
+    tr_entry = tk.Entry(ev, width=4, font=standard_font)
     tr_entry.grid(row=2, column=1, sticky='W', pady=2)
 
 
@@ -117,35 +118,35 @@ if __name__ == '__main__':
     #
     ###########################################################################
 
-    go = Tkinter.Button(
+    go = tk.Button(
         form,
         command=perform,
         text=" Go ", font=standard_font
         )
     go.grid(row=1, column=0, padx=10, pady=10)
 
-    save = Tkinter.Button(
+    save = tk.Button(
         form,
         command=askdir_output,
         text="Save", font=standard_font
         )
     save.grid(row=1, column=1, padx=10, pady=10)
 
-    load = Tkinter.Button(
+    load = tk.Button(
         form,
         command=askdir_output,
         text="Load", font=standard_font
         )
     load.grid(row=1, column=2, padx=10, pady=10)
 
-    help = Tkinter.Button(
+    help = tk.Button(
         form,
         command=askdir_output,
         text="Help", font=standard_font
         )
     help.grid(row=1, column=3, padx=10, pady=10)
 
-    quit = Tkinter.Button(
+    quit = tk.Button(
         form,
         command=askdir_output,
         text="Quit", font=standard_font
@@ -154,47 +155,47 @@ if __name__ == '__main__':
 
 
     # # STEP TWO
-    # stepTwo = Tkinter.LabelFrame(form, text=" 2. Enter Table Details: ")
+    # stepTwo = tk.LabelFrame(form, text=" 2. Enter Table Details: ")
     # stepTwo.grid(row=2, columnspan=7, sticky='W', \
                  # padx=5, pady=5, ipadx=5, ipady=5)
 
-    # outTblLbl = Tkinter.Label(stepTwo, \
+    # outTblLbl = tk.Label(stepTwo, \
           # text="Enter the name of the table to be used in the statements:")
     # outTblLbl.grid(row=3, column=0, sticky='W', padx=5, pady=2)
 
-    # outTblTxt = Tkinter.Entry(stepTwo)
+    # outTblTxt = tk.Entry(stepTwo)
     # outTblTxt.grid(row=3, column=1, columnspan=3, pady=2, sticky='WE')
 
-    # fldLbl = Tkinter.Label(stepTwo, \
+    # fldLbl = tk.Label(stepTwo, \
                            # text="Enter the field (column) names of the table:")
     # fldLbl.grid(row=4, column=0, padx=5, pady=2, sticky='W')
 
-    # getFldChk = Tkinter.Checkbutton(stepTwo, \
+    # getFldChk = tk.Checkbutton(stepTwo, \
                            # text="Get fields automatically from input file",\
                            # onvalue=1, offvalue=0)
     # getFldChk.grid(row=4, column=1, columnspan=3, pady=2, sticky='WE')
 
-    # fldRowTxt = Tkinter.Entry(stepTwo)
+    # fldRowTxt = tk.Entry(stepTwo)
     # fldRowTxt.grid(row=5, columnspan=5, padx=5, pady=2, sticky='WE')
 
-    # transChk = Tkinter.Checkbutton(stepThree, \
+    # transChk = tk.Checkbutton(stepThree, \
                # text="Enable Transaction", onvalue=1, offvalue=0,
                # )
     # transChk.grid(row=6, sticky='W', padx=5, pady=2)
 
 
     # # STEP THREE
-    # stepThree = Tkinter.LabelFrame(form, text=" 3. Configure: ")
+    # stepThree = tk.LabelFrame(form, text=" 3. Configure: ")
     # stepThree.grid(row=3, columnspan=7, sticky='W', \
                    # padx=5, pady=5, ipadx=5, ipady=5)
 
 
-    # transRwLbl = Tkinter.Label(stepThree, \
+    # transRwLbl = tk.Label(stepThree, \
                  # text=" => Specify number of rows per transaction:")
     # transRwLbl.grid(row=6, column=2, columnspan=2, \
                     # sticky='W', padx=5, pady=2)
 
-    # transRwTxt = Tkinter.Entry(stepThree)
+    # transRwTxt = tk.Entry(stepThree)
     # transRwTxt.grid(row=6, column=4, sticky='WE')
 
 

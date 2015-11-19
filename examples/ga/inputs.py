@@ -1,43 +1,47 @@
 
-import random
-import numpy as np
-
-from deap import base
-from deap import creator
-from deap import tools
-
 
 # #### NETWORK AND GENETIC ALGORITH VARIABLES
 
 # number of features (to be extracted, selected) it is equal to number of
 # inputs of the ann as well as number of elements of the vector being
 # the individual, member of the population for genetic algorithm
-k_features = 784*2
-hidden_neurons = 46*2
+k_features = 784
+hidden_neurons = 46
 
-# #### DatastManager initialization
 
+###############################################################################
+#
+#        LOAD DATA
+#
+###############################################################################
 from pymri.dataset import DatasetManager
 # dataset settings
 ds = DatasetManager(
     path_input='/home/jesmasta/amu/master/nifti/bold/',
     contrast=(('PlanTool_0', 'PlanTool_5'), ('PlanCtrl_0', 'PlanCtrl_5')),
     k_features = k_features,
-    # normalize = True,
-    # scale_0_1 = True,
+    normalize = True,
     nnadl = True,
     sizes=(0.75, 0.25)
     )
 # load data
 ds.load_data()
 
+###############################################################################
+#
+#        CHOOSE ROIs
+#
+###############################################################################
+
 # select feature reduction method
-# ds.feature_reduction(roi_selection='RBM')
 ds.feature_reduction(roi_selection='SelectKBest')
+# ds.feature_reduction(roi_selection='/amu/master/nifti/bold/roi_mask_plan.nii.gz')
+
+k_features = ds.X_processed.shape[1]
+print(k_features)
 
 # get training, validation and test datasets for specified roi
-training_data, validation_data, test_data = ds.split_data()
-
+training_data, test_data, vd = ds.split_data()
 
 def random_min_max():
     return random.uniform(ds.training_data_min, ds.training_data_max)
@@ -63,6 +67,13 @@ net.weights = net.best_weights
 #
 ##############################################################################
 
+import random
+import numpy as np
+
+from deap import base
+from deap import creator
+from deap import tools
+
 creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 creator.create("Individual", np.ndarray, fitness=creator.FitnessMax)
 
@@ -70,8 +81,9 @@ IND_SIZE = k_features
 
 
 toolbox = base.Toolbox()
-# toolbox.register("attr_float", random.random)
-toolbox.register("attr_float", random_min_max)
+toolbox.register(
+    "attr_float", random.uniform, ds.training_data_min, ds.training_data_max
+    )
 toolbox.register("individual", tools.initRepeat, creator.Individual,
                  toolbox.attr_float, n=IND_SIZE)
 
@@ -126,7 +138,7 @@ def main():
     #
     # NGEN  is the number of generations for which the
     #       evolution runs
-    CXPB, MUTPB, NGEN = 0.1, 0.8, 400
+    CXPB, MUTPB, NGEN = 0.1, 0.1, 400
 
     mean_log = np.zeros(shape=(NGEN,))
     min_log = np.zeros(shape=(NGEN,))
@@ -137,7 +149,6 @@ def main():
 
     # Evaluate the entire population
     fitnesses = list(map(toolbox.evaluate, pop))
-    print(fitnesses)
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
 
@@ -175,8 +186,6 @@ def main():
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         fitnesses = map(toolbox.evaluate, invalid_ind)
-        print('\ngen: %d' % g)
-        print(fitnesses)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
@@ -202,13 +211,32 @@ def main():
         mean_log[g] = mean
         std_log[g] = std
 
+    print("\n\n\n")
+    print("####################################")
     print("-- End of (successful) evolution --")
 
     best_ind = tools.selBest(pop, 1)[0]
-    print("Best individual is %s, %s" % (best_ind, best_ind.fitness.values))
+    print("\nBest individual is %s" % best_ind)
+    print(
+        "\nFitness value of the best individual is: %s" %
+        best_ind.fitness.values[0]
+        )
+
+    print(
+        "\nIndividuals were vectors of floats in range < %f, %f >" %
+        (ds.training_data_min, ds.training_data_max)
+        )
+    print("####################################")
+    print("\n\n\n")
 
     # visualize evolution
     import matplotlib.pyplot as plt
+
+    font = {'family': 'sans-serif',
+            'weight': 'bold',
+            'size': 20}
+    plt.rc('font', **font)
+
     plt.subplot(211)
     plt.plot(max_log, c='r', label='max fitness')
     plt.plot(mean_log, label='mean fitness')
@@ -216,7 +244,7 @@ def main():
     plt.ylim(-0.1, 1.1)
     plt.legend(loc=3)
     plt.subplot(212)
-    plt.plot(max_log, label='max fitness')
+    plt.plot(max_log, c='r', label='max fitness')
     plt.plot(mean_log, label='mean fitness')
     plt.ylim(
         max_log.min()-0.01*max_log.min(), max_log.max() + 0.01*max_log.max()

@@ -6,7 +6,6 @@ PyMRI.egg-info/not-zip-safe
 PyMRI.egg-info/requires.txt
 PyMRI.egg-info/top_level.txt
 pymri/__init__.py
-pymri/main_gui.py
 pymri/dataset/__init__.py
 pymri/dataset/datasets.py
 pymri/dataset/nnadl_dataset.py
@@ -16,6 +15,10 @@ pymri/ev_conditions/ev_conditions.py
 pymri/genetic_algorithm/__init__.py
 pymri/genetic_algorithm/fitness_inputs.py
 pymri/genetic_algorithm/fitness_params.py
+pymri/gui/__init__.py
+pymri/gui/classification.py
+pymri/gui/ev_attributes.py
+pymri/gui/main_menu.py
 pymri/model/__init__.py
 pymri/model/fnn.py
 pymri/model/fnn2.py

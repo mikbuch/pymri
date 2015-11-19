@@ -1,0 +1,18 @@
+Bold image
+/home/jesmasta/amu/master/nifti/bold/bold.nii.gz
+Attributes text file
+/home/jesmasta/amu/master/nifti/bold/attributes.txt
+Attributes literal text file
+/home/jesmasta/amu/master/nifti/bold/attributes_literal.txt
+Mask image
+/home/jesmasta/amu/master/nifti/bold/mask.nii.gz
+Condition (class) 00
+PlanCtrl_0 PlanCtrl_0
+Condition (class) 01
+PlanTool_0 PlanTool_5
+Normalize load
+1
+n features to extract/select
+784
+Output
+""

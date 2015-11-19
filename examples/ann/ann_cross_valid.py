@@ -23,7 +23,7 @@ minibatch_size = 11
 eta = 2.95
 
 # perform LeavePOut n times
-n_times_LeavePOut = 30
+n_times_LeavePOut = 20
 
 
 ###############################################################################
@@ -31,15 +31,17 @@ n_times_LeavePOut = 30
 #        LOAD DATA
 #
 ###############################################################################
-from pymri.dataset import DatasetManager
+from pymri.dataset.datasets import DatasetManager2
 # dataset settings
-ds = DatasetManager(
-    path_input='/home/jesmasta/amu/master/nifti/bold/',
+path_base = '/home/jesmasta/amu/master/nifti/bold/'
+ds = DatasetManager2(
+    path_bold=path_base + 'bold.nii.gz',
+    path_attr=path_base + 'attributes.txt',
+    path_attr_lit=path_base + 'attributes_literal.txt',
+    path_mask_brain=path_base + 'mask.nii.gz',
     contrast=(('PlanTool_0', 'PlanTool_5'), ('PlanCtrl_0', 'PlanCtrl_5')),
-    k_features = k_features,
     normalize = True,
     nnadl = True,
-    sizes=(0.75, 0.25)
     )
 # load data
 ds.load_data()
@@ -49,10 +51,9 @@ ds.load_data()
 #        CHOOSE ROIs
 #
 ###############################################################################
-roi_selection = ('SelectKBest', 'PCA')
 
 # select feature reduction method
-ds.feature_reduction(roi_selection='SelectKBest')
+ds.feature_reduction(roi_selection='SelectKBest', k_features=k_features)
 # ds.feature_reduction(roi_selection='/amu/master/nifti/bold/roi_mask_plan.nii.gz')
 
 k_features = ds.X_processed.shape[1]
@@ -94,7 +95,8 @@ for i in range(n_times_LeavePOut):
     ###########################################################################
 
     # get training, validation and test datasets for specified roi
-    training_data, validation_data, test_data = ds.split_data()
+    # training_data, validation_data, test_data = ds.split_data()
+    training_data, test_data, vd = ds.split_data(sizes=(0.75,0.25))
 
     ###########################################################################
     #

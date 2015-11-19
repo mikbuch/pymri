@@ -61,17 +61,33 @@ else:
         "network3.py to set\nthe GPU flag to True."
 
 #### Load the MNIST data
-def load_data_shared(filename="../data/mnist.pkl.gz"):
-    # f = gzip.open(filename, 'rb')
-    # training_data, validation_data, test_data = cPickle.load(f)
-    # f.close()
+def load_data_shared():
 
-    from pymri.dataset import load_nnadl_dataset
-    training_data, validation_data, test_data = load_nnadl_dataset(
-        data_dir='/amu/master/nifti/bold/', Y=(('ExeTool_0', 'ExeTool_5'),
-        ('ExeCtrl_0', 'ExeCtrl_5')), k_features=784, theano=True
+    from pymri.dataset import DatasetManager
+    ds = DatasetManager(
+        path_input='/home/jesmasta/amu/master/nifti/bold/',
+        contrast=(('ExeTool_0', 'ExeTool_5'), ('ExeCtrl_0', 'ExeCtrl_5')),
+        # contrast=(('PlanTool_0', 'PlanTool_5'), ('PlanCtrl_0', 'PlanCtrl_5')),
+        k_features = 784,
+        normalize = False,
+        nnadl = False,
+        # sizes=(0.5, 0.25, 0.25)
+        sizes=(0.75, 0.5)
         )
+    # load data
+    ds.load_data()
+
+  
+    # #### choose ROIs
+    # select feature reduction method
+    ds.feature_reduction(roi_selection='SelectKBest')
+
+    # #### split data
+    # get training, validation and test datasets for specified roi
+    training_data, validation_data, test_data = ds.split_data()
+
     print('data loaded')
+
 
     def shared(data):
         """Place the data into shared variables.  This allows Theano to copy
@@ -83,7 +99,7 @@ def load_data_shared(filename="../data/mnist.pkl.gz"):
         shared_y = theano.shared(
             np.asarray(data[1], dtype=theano.config.floatX), borrow=True)
         return shared_x, T.cast(shared_y, "int32")
-    return [shared(training_data), shared(validation_data), shared(test_data)]
+    return [shared(training_data), shared(validation_data), None]
 
 #### Main class used to construct and train networks
 class Network(object):
@@ -113,12 +129,14 @@ class Network(object):
         """Train the network using mini-batch stochastic gradient descent."""
         training_x, training_y = training_data
         validation_x, validation_y = validation_data
-        test_x, test_y = test_data
+        if test_data:
+            test_x, test_y = test_data
 
         # compute number of minibatches for training, validation and testing
         num_training_batches = size(training_data)/mini_batch_size
         num_validation_batches = size(validation_data)/mini_batch_size
-        num_test_batches = size(test_data)/mini_batch_size
+        if test_data:
+            num_test_batches = size(test_data)/mini_batch_size
 
         # define the (regularized) cost function, symbolic gradients, and updates
         l2_norm_squared = sum([(layer.w**2).sum() for layer in self.layers])
@@ -147,20 +165,22 @@ class Network(object):
                 self.y:
                 validation_y[i*self.mini_batch_size: (i+1)*self.mini_batch_size]
             })
-        test_mb_accuracy = theano.function(
-            [i], self.layers[-1].accuracy(self.y),
-            givens={
-                self.x:
-                test_x[i*self.mini_batch_size: (i+1)*self.mini_batch_size],
-                self.y:
-                test_y[i*self.mini_batch_size: (i+1)*self.mini_batch_size]
-            })
-        self.test_mb_predictions = theano.function(
-            [i], self.layers[-1].y_out,
-            givens={
-                self.x:
-                test_x[i*self.mini_batch_size: (i+1)*self.mini_batch_size]
-            })
+        if test_data:
+            test_mb_accuracy = theano.function(
+                [i], self.layers[-1].accuracy(self.y),
+                givens={
+                    self.x:
+                    test_x[i*self.mini_batch_size: (i+1)*self.mini_batch_size],
+                    self.y:
+                    test_y[i*self.mini_batch_size: (i+1)*self.mini_batch_size]
+                })
+        if test_data:
+            self.test_mb_predictions = theano.function(
+                [i], self.layers[-1].y_out,
+                givens={
+                    self.x:
+                    test_x[i*self.mini_batch_size: (i+1)*self.mini_batch_size]
+                })
         # Do the actual training
         best_validation_accuracy = 0.0
         for epoch in xrange(epochs):
@@ -186,7 +206,7 @@ class Network(object):
         print("Finished training network.")
         print("Best validation accuracy of {0:.2%} obtained at iteration {1}".format(
             best_validation_accuracy, best_iteration))
-        print("Corresponding test accuracy of {0:.2%}".format(test_accuracy))
+        # print("Corresponding test accuracy of {0:.2%}".format(test_accuracy))
 
 #### Define layer types
 

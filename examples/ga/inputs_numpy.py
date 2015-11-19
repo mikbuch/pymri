@@ -7,6 +7,12 @@ from pymri.dataset import DatasetManager
 k_features = 784
 hidden_neurons = 46
 
+###############################################################################
+#
+#        LOAD DATA
+#
+###############################################################################
+from pymri.dataset import DatasetManager
 # dataset settings
 ds = DatasetManager(
     path_input='/home/jesmasta/amu/master/nifti/bold/',
@@ -19,11 +25,21 @@ ds = DatasetManager(
 # load data
 ds.load_data()
 
+###############################################################################
+#
+#        CHOOSE ROIs
+#
+###############################################################################
+
 # select feature reduction method
 ds.feature_reduction(roi_selection='SelectKBest')
+# ds.feature_reduction(roi_selection='/amu/master/nifti/bold/roi_mask_plan.nii.gz')
+
+k_features = ds.X_processed.shape[1]
+print(k_features)
 
 # get training, validation and test datasets for specified roi
-training_data, validation_data, test_data = ds.split_data()
+training_data, test_data, vd = ds.split_data()
 
 # set up network
 from pymri.model import fnn
@@ -130,8 +146,6 @@ def main():
     algorithms.eaSimple(pop, toolbox, cxpb=0.5, mutpb=0.2, ngen=40, stats=stats,
                         halloffame=hof)
 
-    import pdb
-    pdb.set_trace()
 
     return pop, stats, hof
 
