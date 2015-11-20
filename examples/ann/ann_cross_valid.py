@@ -31,17 +31,16 @@ n_times_LeavePOut = 20
 #        LOAD DATA
 #
 ###############################################################################
-from pymri.dataset.datasets import DatasetManager2
+from pymri.dataset.datasets import DatasetManager
 # dataset settings
 path_base = '/home/jesmasta/amu/master/nifti/bold/'
-ds = DatasetManager2(
+ds = DatasetManager(
     path_bold=path_base + 'bold.nii.gz',
     path_attr=path_base + 'attributes.txt',
     path_attr_lit=path_base + 'attributes_literal.txt',
     path_mask_brain=path_base + 'mask.nii.gz',
     contrast=(('PlanTool_0', 'PlanTool_5'), ('PlanCtrl_0', 'PlanCtrl_5')),
-    normalize = True,
-    nnadl = True,
+    nnadl = True
     )
 # load data
 ds.load_data()
@@ -53,8 +52,12 @@ ds.load_data()
 ###############################################################################
 
 # select feature reduction method
-ds.feature_reduction(roi_selection='SelectKBest', k_features=k_features)
-# ds.feature_reduction(roi_selection='/amu/master/nifti/bold/roi_mask_plan.nii.gz')
+# ds.feature_reduction(
+    # roi_selection='SelectKBest', k_features=k_features, normalize=True
+    # )
+ds.feature_reduction(
+    roi_selection='/amu/master/nifti/bold/roi_mask_plan.nii.gz', normalize=True
+    )
 
 k_features = ds.X_processed.shape[1]
 print(k_features)
