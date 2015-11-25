@@ -64,6 +64,8 @@ def perform():
     # in case we use fann as classifier we have to reshape data
     if 'fANN' in var_classifier_type.get():
         nnadl = True
+    else:
+        nnadl = False
 
     ds = DatasetManager(
         # path_input='/home/jesmasta/amu/master/nifti/bold/',
@@ -84,11 +86,19 @@ def perform():
 
     # TODO: more universal function needed
 
+    if 'SKB' in var_feature_method.get():
+        feature_arguments = None
+    elif 'ROI' in var_feature_method.get():
+        # print var_mask_roi.get()
+        feature_arguments = var_mask_roi.get()
+        # print(feature_arguments)
+
     # select feature reduction method
     ds.feature_reduction(
-        roi_selection=var_mask_roi.get(),
+        roi_selection=var_feature_method.get(),
         k_features=var_k_features.get(),
-        normalize = var_normalize.get()
+        normalize = var_normalize.get(),
+        feature_arguments=feature_arguments
         )
 
     ###########################################################################
@@ -120,6 +130,23 @@ def perform():
 
                 # record the best result
                 accuracies[i] = net.best_score/float(len(test_data))
+
+            if 'theano fnn' in var_classifier_type.get():
+                print('--- THEANO FNN ---')
+                
+
+                import pymri.model.network3 as network3
+                from pymri.model.network3 import Network
+
+                training_data, validation_data, test_data = \
+                    network3.load_data_shared()
+                mini_batch_size = 10
+                net = Network([
+                    network3.FullyConnectedLayer(n_in=784, n_out=100),
+                    network3.SoftmaxLayer(n_in=100, n_out=2)], mini_batch_size)
+                net.SGD(training_data, 300, mini_batch_size, 0.1, 
+                        validation_data, test_data)
+                accuracies[i] = net.best_validation_accuracy
 
     mean_accuracy = accuracies.mean()
     print('\n\nmean accuracy: %f' % mean_accuracy)
@@ -157,7 +184,7 @@ def save():
         writer.writerow(['Bold image', var_bold.get()])
         writer.writerow(['Attributes text file', var_attr.get()])
         writer.writerow(['Attributes literal text file', var_attr_lit.get()])
-        writer.writerow(['Mask image', var_mask_brain.get()])
+        writer.writerow(['Mask brain', var_mask_brain.get()])
         writer.writerow(['Condition (class) 00', var_class_00.get()])
         writer.writerow(['Condition (class) 01', var_class_01.get()])
 
@@ -462,14 +489,15 @@ normalize_chk.grid(
 
 # Feature Selection/Extraction method ###
 var_feature_method = tk.StringVar()
-var_feature_method.set("SelectKBest")
+var_feature_method.set("SelectKBest (SKB)")
+feature_arguments=None
 
 feature_option = tk.OptionMenu(
     feature_frame, var_feature_method,
-    "SelectKBest",
+    "SelectKBest (SKB)",
     "ROI mask",
-    "Principal Component Analysis",
-    "Restricted Boltzmann Machine",
+    "Principal Component Analysis (PCA)",
+    "Restricted Boltzmann Machine (RBM)",
     command=feature_choose
     )
 feature_option.grid(row=2, stick='W', padx='20')
@@ -569,8 +597,6 @@ RBM_rs_entry = tk.Entry(
     )
 RBM_rs_entry.grid(row=1, column=3, pady=2)
 
-# learning_rate=0.1, batch_size=10, n_iter=10, verbose=0, random_state=None
-
 
 ###########################################################################
 #
@@ -598,6 +624,7 @@ classifier_option = tk.OptionMenu(
     "Supported Vector Classifier (SVC)",
     "Linear Discriminant Analysis (LDA)",
     "Quadratic Discriminant Analysis (QDA)",
+    "theano fnn",
     command=classifier_choose
     )
 classifier_option.grid(row=1, stick='WS', padx='20')

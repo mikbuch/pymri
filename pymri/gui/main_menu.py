@@ -1,4 +1,5 @@
 import Tkinter as tk
+import ImageTk
 import tkFont
 import tkFileDialog
 import os
@@ -20,13 +21,21 @@ if __name__ == '__main__':
     root.wm_title('PyMRI main window')
 
 
+    # canvas = tk.Canvas(frame, bg="black", width=500, height=500)
+    canvas = tk.Canvas(root, width=500, height=400)
+    canvas.grid(row=0, sticky='WE')
+
+    photoimage = ImageTk.PhotoImage(file="logo.png")
+    canvas.create_image(250, 210, image=photoimage, anchor=tk.CENTER)
+
+
     preproc_button = tk.Button(
         root,
         command=preprocessing,
         text="Preprocessing", font=standard_font
         )
     preproc_button.grid(
-        row=0, column=0, padx=5, pady=5, ipadx=10, sticky='WE'
+        row=1, column=0, padx=5, pady=5, ipadx=10, sticky='WE'
         )
 
     ev_attributes_button = tk.Button(
@@ -35,7 +44,7 @@ if __name__ == '__main__':
         text="EV attributeses", font=standard_font
         )
     ev_attributes_button.grid(
-        row=1, column=0, padx=5, pady=5, ipadx=10, sticky='WE'
+        row=2, column=0, padx=5, pady=5, ipadx=10, sticky='WE'
         )
 
     classifier_button = tk.Button(
@@ -44,7 +53,7 @@ if __name__ == '__main__':
         text="Classification", font=standard_font
         )
     classifier_button.grid(
-        row=2, column=0, padx=5, pady=5, ipadx=10, sticky='WE'
+        row=3, column=0, padx=5, pady=5, ipadx=10, sticky='WE'
         )
 
     root.mainloop()

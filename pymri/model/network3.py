@@ -63,28 +63,33 @@ else:
 #### Load the MNIST data
 def load_data_shared():
 
-    from pymri.dataset import DatasetManager
+
+    from pymri.dataset.datasets import DatasetManager
+    # dataset settings
+    path_base = '/home/jesmasta/amu/master/nifti/bold/'
     ds = DatasetManager(
-        path_input='/home/jesmasta/amu/master/nifti/bold/',
+        path_bold=path_base + 'bold.nii.gz',
+        path_attr=path_base + 'attributes.txt',
+        path_attr_lit=path_base + 'attributes_literal.txt',
+        path_mask_brain=path_base + 'mask.nii.gz',
         contrast=(('ExeTool_0', 'ExeTool_5'), ('ExeCtrl_0', 'ExeCtrl_5')),
-        # contrast=(('PlanTool_0', 'PlanTool_5'), ('PlanCtrl_0', 'PlanCtrl_5')),
-        k_features = 784,
-        normalize = False,
-        nnadl = False,
-        # sizes=(0.5, 0.25, 0.25)
-        sizes=(0.75, 0.5)
+        nnadl = False
         )
     # load data
     ds.load_data()
 
-  
     # #### choose ROIs
     # select feature reduction method
-    ds.feature_reduction(roi_selection='SelectKBest')
-
+    ds.feature_reduction(
+        roi_selection='SelectKBest', k_features=784,
+        normalize=True
+        )
+  
+    
     # #### split data
     # get training, validation and test datasets for specified roi
-    training_data, validation_data, test_data = ds.split_data()
+    training_data, validation_data, test_data = ds.split_data(sizes=(0.5,0.25))
+
 
     print('data loaded')
 
@@ -123,6 +128,7 @@ class Network(object):
                 prev_layer.output, prev_layer.output_dropout, self.mini_batch_size)
         self.output = self.layers[-1].output
         self.output_dropout = self.layers[-1].output_dropout
+        self.best_validation_accuracy = 0.0
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
             validation_data, test_data, lmbda=0.0):
@@ -203,6 +209,7 @@ class Network(object):
                                 [test_mb_accuracy(j) for j in xrange(num_test_batches)])
                             print('The corresponding test accuracy is {0:.2%}'.format(
                                 test_accuracy))
+        self.best_validation_accuracy = best_validation_accuracy
         print("Finished training network.")
         print("Best validation accuracy of {0:.2%} obtained at iteration {1}".format(
             best_validation_accuracy, best_iteration))

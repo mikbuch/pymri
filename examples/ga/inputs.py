@@ -16,13 +16,14 @@ hidden_neurons = 46
 ###############################################################################
 from pymri.dataset import DatasetManager
 # dataset settings
+path_base = '/home/jesmasta/amu/master/nifti/bold/'
 ds = DatasetManager(
-    path_input='/home/jesmasta/amu/master/nifti/bold/',
-    contrast=(('PlanTool_0', 'PlanTool_5'), ('PlanCtrl_0', 'PlanCtrl_5')),
-    k_features = k_features,
-    normalize = True,
-    nnadl = True,
-    sizes=(0.75, 0.25)
+    path_bold=path_base + 'bold.nii.gz',
+    path_attr=path_base + 'attributes.txt',
+    path_attr_lit=path_base + 'attributes_literal.txt',
+    path_mask_brain=path_base + 'mask.nii.gz',
+    contrast=(('ExeTool_0', 'ExeTool_5'), ('ExeCtrl_0', 'ExeCtrl_5')),
+    nnadl = True
     )
 # load data
 ds.load_data()
@@ -34,14 +35,15 @@ ds.load_data()
 ###############################################################################
 
 # select feature reduction method
-ds.feature_reduction(roi_selection='SelectKBest')
+ds.feature_reduction(roi_selection='SelectKBest', normalize=True)
 # ds.feature_reduction(roi_selection='/amu/master/nifti/bold/roi_mask_plan.nii.gz')
 
 k_features = ds.X_processed.shape[1]
 print(k_features)
 
 # get training, validation and test datasets for specified roi
-training_data, test_data, vd = ds.split_data()
+training_data, test_data, vd = ds.split_data(sizes=(0.75, 0.25))
+
 
 def random_min_max():
     return random.uniform(ds.training_data_min, ds.training_data_max)
@@ -129,7 +131,7 @@ def main():
 
     # create an initial population of 300 individuals (where
     # each individual is a list of integers)
-    pop = toolbox.population(n=10)
+    pop = toolbox.population(n=50)
 
     # CXPB  is the probability with which two individuals
     #       are crossed
@@ -138,7 +140,7 @@ def main():
     #
     # NGEN  is the number of generations for which the
     #       evolution runs
-    CXPB, MUTPB, NGEN = 0.1, 0.1, 400
+    CXPB, MUTPB, NGEN = 0.1, 0.8, 400
 
     mean_log = np.zeros(shape=(NGEN,))
     min_log = np.zeros(shape=(NGEN,))
@@ -216,7 +218,18 @@ def main():
     print("-- End of (successful) evolution --")
 
     best_ind = tools.selBest(pop, 1)[0]
-    print("\nBest individual is %s" % best_ind)
+    # print("\nBest individual is %s" % best_ind)
+
+    best_ind_with_class = np.zeros(shape=(784, 1,))
+    for i in range(len(best_ind)):
+        best_ind_with_class[i][0] = best_ind[i]
+
+    best_activation = net.feedforward(best_ind_with_class)
+    print(
+        "\nOutput layer values for best individual are:" +
+        "\nx_1 = %f and x_2 = %f" %
+        (best_activation[0], best_activation[1])
+        )
     print(
         "\nFitness value of the best individual is: %s" %
         best_ind.fitness.values[0]

@@ -118,7 +118,11 @@ class DatasetManager(object):
         print('##############################')
         self.X_raw, self.y = X, y
 
-    def feature_reduction(self, roi_selection, k_features=784, normalize=True):
+    def feature_reduction(
+            self,
+            roi_selection, k_features=784, normalize=True,
+            feature_arguments=None
+            ):
         self.k_features = k_features
         self.normalize = normalize
 
@@ -133,14 +137,14 @@ class DatasetManager(object):
         y = self.y
 
         # ROI selection (feature reduction) method to be applied
-        if roi_selection == 'SelectKBest':
+        if 'SelectKBest' in roi_selection or 'SKB' in roi_selection:
             X = self._SelectKBest(X, y)
-        elif roi_selection == 'PCA':
-            X = self._PCA(X, y)
-        elif roi_selection == 'RBM':
-            X = self._RBM(X, y)
-        else:
-            X = self._roi_mask_apply(X, roi_selection)
+        elif 'PCA' in roi_selection:
+            X = self._PCA(X, y, feature_arguments)
+        elif 'RBM' in roi_selection:
+            X = self._RBM(X, y, feature_arguments)
+        elif 'ROI' in roi_selection:
+            X = self._roi_mask_apply(X, feature_arguments)
             self.k_features = X.shape[1]
 
         # normalize if set
@@ -225,7 +229,8 @@ class DatasetManager(object):
         return X
 
     # TODO: finish this one
-    def _roi_mask_apply(self, X, roi_mask_img):
+    def _roi_mask_apply(self, X, feature_arguments):
+        roi_mask_img = feature_arguments
 
         # roi_mask_img = nibabel.load(roi_mask_img)
 

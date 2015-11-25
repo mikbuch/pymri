@@ -4,11 +4,8 @@ import tkFileDialog
 
 import ttk
 
-# TODO: Create working area frame, menu under it
-# TODO: Scrolling left and right in the entry
-# TODO: Wider entry
-# TODO: Ctrl+a to select all in entry
 
+# TODO: entire perform() function in subprocess to allow window to refresh
 
 def feature_choose(sel_ext_method):
     if sel_ext_method == 'ROI mask':
@@ -67,6 +64,8 @@ def perform():
     # in case we use fann as classifier we have to reshape data
     if 'fANN' in var_classifier_type.get():
         nnadl = True
+    else:
+        nnadl = False
 
     ds = DatasetManager(
         # path_input='/home/jesmasta/amu/master/nifti/bold/',
@@ -87,14 +86,20 @@ def perform():
 
     # TODO: more universal function needed
 
+    if 'SKB' in var_feature_method.get():
+        feature_arguments = None
+    elif 'ROI' in var_feature_method.get():
+        # print var_mask_roi.get()
+        feature_arguments = var_mask_roi.get()
+        # print(feature_arguments)
+
     # select feature reduction method
     ds.feature_reduction(
-        roi_selection=var_mask_roi.get(),
+        roi_selection=var_feature_method.get(),
         k_features=var_k_features.get(),
-        normalize = var_normalize.get()
+        normalize = var_normalize.get(),
+        feature_arguments=feature_arguments
         )
-    # ds.feature_reduction(roi_selection=\
-    # '/amu/master/nifti/bold/roi_mask_plan.nii.gz')
 
     ###########################################################################
     #
@@ -125,6 +130,23 @@ def perform():
 
                 # record the best result
                 accuracies[i] = net.best_score/float(len(test_data))
+
+            if 'theano fnn' in var_classifier_type.get():
+                print('--- THEANO FNN ---')
+                
+
+                import pymri.model.network3 as network3
+                from pymri.model.network3 import Network
+
+                training_data, validation_data, test_data = \
+                    network3.load_data_shared()
+                mini_batch_size = 10
+                net = Network([
+                    network3.FullyConnectedLayer(n_in=784, n_out=100),
+                    network3.SoftmaxLayer(n_in=100, n_out=2)], mini_batch_size)
+                net.SGD(training_data, 300, mini_batch_size, 0.1, 
+                        validation_data, test_data)
+                accuracies[i] = net.best_validation_accuracy
 
     mean_accuracy = accuracies.mean()
     print('\n\nmean accuracy: %f' % mean_accuracy)
@@ -162,14 +184,14 @@ def save():
         writer.writerow(['Bold image', var_bold.get()])
         writer.writerow(['Attributes text file', var_attr.get()])
         writer.writerow(['Attributes literal text file', var_attr_lit.get()])
-        writer.writerow(['Mask image', var_mask_brain.get()])
+        writer.writerow(['Mask brain', var_mask_brain.get()])
         writer.writerow(['Condition (class) 00', var_class_00.get()])
         writer.writerow(['Condition (class) 01', var_class_01.get()])
 
-        # FAETURE SELECTION/EXTRACTION VARIABLES
-        writer.writerow(['k features to extract/select', var_k_features.get()])
+        # FEATURE REDUCTION (SELECTION/EXTRACTION) VARIABLES
+        writer.writerow(['k features (reduction to k)', var_k_features.get()])
         writer.writerow(['Normalize data', var_normalize.get()])
-        writer.writerow(['Feature sel/ext method', var_feature_method.get()])
+        writer.writerow(['Feature reduction method', var_feature_method.get()])
 
         writer.writerow(['ROI mask path', var_mask_roi.get()])
 
@@ -209,7 +231,7 @@ def load():
     var_class_00.set(read_data[4][1])
     var_class_01.set(read_data[5][1])
 
-    # FAETURE SELECTION/REDUCTION VARIABLES
+    # FEATURE REDUCTION (SELECTION/EXTRACTION) VARIABLES
     var_k_features.set(read_data[6][1])
     var_normalize.set(read_data[7][1])
     var_feature_method.set(read_data[8][1])
@@ -412,7 +434,7 @@ constast_01_txt.grid(row=6, column=2, columnspan=10, sticky="WE", pady=5)
 
 ###########################################################################
 #
-#     FEATURE SELECTION/EXTRACTION FRAME
+#     FEATURE REDUCTION (SELECTION/EXTRACTION) FRAME
 #
 ###########################################################################
 
@@ -423,7 +445,7 @@ feature_frame.grid(
     padx=20, pady=10, ipadx=10, ipady=10
     )
 
-note.add(feature_frame, text='Selection/reduction', padding=20)
+note.add(feature_frame, text='Feature reduction', padding=20)
 note.grid(
     row=0, column=0, columnspan=10, sticky='WE',
     padx=20, pady=10, ipadx=10, ipady=10
@@ -442,7 +464,8 @@ k_features_frame.grid(
     )
 
 k_features_label = tk.Label(
-    k_features_frame, text="Extract/select n features:", font=font_standard
+    k_features_frame,
+    text="Reduct to (extract/select) n features:", font=font_standard
     )
 k_features_label.grid(row=0, column=0, sticky='W')
 
@@ -466,14 +489,15 @@ normalize_chk.grid(
 
 # Feature Selection/Extraction method ###
 var_feature_method = tk.StringVar()
-var_feature_method.set("SelectKBest")
+var_feature_method.set("SelectKBest (SKB)")
+feature_arguments=None
 
 feature_option = tk.OptionMenu(
     feature_frame, var_feature_method,
-    "SelectKBest",
+    "SelectKBest (SKB)",
     "ROI mask",
-    "Principal Component Analysis",
-    "Restricted Boltzmann Machine",
+    "Principal Component Analysis (PCA)",
+    "Restricted Boltzmann Machine (RBM)",
     command=feature_choose
     )
 feature_option.grid(row=2, stick='W', padx='20')
@@ -573,8 +597,6 @@ RBM_rs_entry = tk.Entry(
     )
 RBM_rs_entry.grid(row=1, column=3, pady=2)
 
-# learning_rate=0.1, batch_size=10, n_iter=10, verbose=0, random_state=None
-
 
 ###########################################################################
 #
@@ -602,6 +624,7 @@ classifier_option = tk.OptionMenu(
     "Supported Vector Classifier (SVC)",
     "Linear Discriminant Analysis (LDA)",
     "Quadratic Discriminant Analysis (QDA)",
+    "theano fnn",
     command=classifier_choose
     )
 classifier_option.grid(row=1, stick='WS', padx='20')
