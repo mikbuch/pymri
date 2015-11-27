@@ -177,76 +177,18 @@ def perform():
     plt.show()
 
 
-def create_classifier():
-    '''
-    For some classifiers testing phase is joined with training for convinence.
-    '''
-    from pymri.model import Classifier
-
-    if 'fnn' in var_classifier_type.get():
-        cls = Classifier(
-            input_layer_size=var_k_features.get(),
-            hidden_layer_size=fANN_hn.get(),
-            output_layer_size=var_classes_number.get(),
-            minibatch_size=
-            )
-
-        if 'simple' in var_classifier_type.get():
-            cls.type = 'simple fnn'
-            '''
-            from pymri.model import fnn
-            net = fnn.Network(
-                [input_layer_size, hidden_layer_size, output_layer_size]
-                )
-            '''
-
-        if 'theano' in var_classifier_type.get():
-            cls.type = 'theano fnn'
-
-
-    if :
-        cls = Classifier(
-            type='theano fnn',
-            input_layer_size=var_k_features.get(),
-            hidden_layer_size=fANN_hn.get(),
-            output_layer_size=var_classes_number.get()
-            )
-
-        '''
-        import pymri.model.network3 as network3
-        from pymri.model.network3 import Network
-
-        training_data, validation_data, test_data = \
-            network3.load_data_shared()
-        mini_batch_size = 10
-        net = Network([
-            network3.FullyConnectedLayer(n_in=784, n_out=100),
-            network3.SoftmaxLayer(n_in=100, n_out=2)], mini_batch_size)
-        '''
-
-
-def train_classifier():
-    if csl.type == 'simple fnn':
-        # artificial neural network
-
-    elif cls.type == 'theano fnn':
-        print('--- THEANO FNN ---')
-
+def train_classifier()
 
 def test_classifier():
     '''
     For some classifiers testing phase is joined with training for convinence.
     '''
     if csl.type == 'simple fnn':
-        cls.train(
-            training_data, fANN_epochs.get(), fANN_ms.get(), fANN_eta.get(),
-            test_data=test_data
-            )
+        # classifier already trained and tested
+        pass
     elif cls.type == 'theano fnn':
-        cls.train(
-            training_data, 300, mini_batch_size, 0.1,
-            validation_data, test_data
-            )
+        pass
+    # TODO: add remaining classifiers
 
 def get_best_accuracy():
     return cls.get_best_accuracy()
@@ -265,22 +207,18 @@ def perform_classification():
 
 
     # for subject in number of subjects, etc.
-
     for sub in subs_num:
-
         for hand in hands_num:
             # load dataset using variables from load_data frame (load_data tab)
             load_data()
-            # create Classifier specified in Classifier tab
-            create_classifier()
-
             for roi in rois_num:
                 # get the data from specified import ROIs
                 get_roi_data()
-
                 for n_time in n_times_num:
                     # split dataset use Classifier/Performance settings
                     split_data()
+                    # create Classifier specified in Classifier tab
+                    create_classifier()
                     # train and test classifier
                     train_classifier()
                     test_classifier()
