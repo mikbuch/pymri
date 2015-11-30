@@ -19,26 +19,26 @@ class DatasetManager(object):
     def __init__(
             self,
             contrast,
-            path_bold='./bold.nii.gz',
-            path_attr='./attributes.txt',
-            path_attr_lit='./attributes_literal.txt',
-            path_mask_brain='./mask.nii.gz',
+            mvpa_directory='./',
+            bold='bold.nii.gz',
+            attr='attributes.txt',
+            attr_lit='attributes_literal.txt',
+            mask_brain='mask.nii.gz',
             path_output='./',
-            nnadl=False,
             scale_0_1=False,
             vectorize_target=False,
             ):
 
         self.contrast = contrast
-        self.path_bold = path_bold
-        self.path_attr = path_attr
-        self.path_attr_lit = path_attr_lit
-        self.path_mask_brain = path_mask_brain
-        self.path_output = path_output
+        self.bold = mvpa_directory + bold
+        self.attr = mvpa_directory + attr
+        self.attr_lit = mvpa_directory + attr_lit
+        self.mask_brain = mvpa_directory + mask_brain
+        self.output = path_output
         self.k_features = None
         self.normalize = None
         self.scale_0_1 = scale_0_1
-        self.nnadl = nnadl
+        self.nnadl = False
         self.vectorize_target = vectorize_target
         self.sizes = None
 
@@ -51,15 +51,18 @@ class DatasetManager(object):
         self.X_raw = None
         self.X_processed = None
         self.y = None
+        self.y_processed = None
+
+        self.load_data()
 
     def load_data(self):
 
         # create sklearn's Bunch of data
         dataset_files = Bunch(
-            func=self.path_bold,
-            session_target=self.path_attr,
-            mask=self.path_mask_brain,
-            conditions_target=self.path_attr_lit
+            func=self.bold,
+            session_target=self.attr,
+            mask=self.mask_brain,
+            conditions_target=self.attr_lit
             )
 
         # fmri_data and mask are copied to break reference to
@@ -119,33 +122,30 @@ class DatasetManager(object):
         self.X_raw, self.y = X, y
 
     def feature_reduction(
-            self,
-            roi_selection, k_features=784, normalize=True,
-            feature_arguments=None
+            self, roi_path=None, k_features=0, reduction_method=None,
+            normalize=True, nnadl=False, feature_arguments=None
             ):
         self.k_features = k_features
+        # self.reduction_method = reduction_method
         self.normalize = normalize
-
-        if roi_selection is None:
-            print('ROI selection method has to be specified'),
-            print('Available values are: \'SelectKBest\', \'PCA\', \'RBM\''),
-            print('or \'path_to_roi_mask\'\n')
+        self.nnadl = nnadl
 
         # Array being processed will be loaded raw data
         X = self.X_raw
         # target
         y = self.y
 
-        # ROI selection (feature reduction) method to be applied
-        if 'SelectKBest' in roi_selection or 'SKB' in roi_selection:
-            X = self._SelectKBest(X, y)
-        elif 'PCA' in roi_selection:
-            X = self._PCA(X, y, feature_arguments)
-        elif 'RBM' in roi_selection:
-            X = self._RBM(X, y, feature_arguments)
-        elif 'ROI' in roi_selection:
-            X = self._roi_mask_apply(X, feature_arguments)
-            self.k_features = X.shape[1]
+        if roi_path:
+            X = self._roi_mask_apply(X, roi_path)
+
+        if reduction_method:
+            # ROI selection (feature reduction) method to be applied
+            if 'SelectKBest' in reduction_method or 'SKB' in reduction_method:
+                X = self._SelectKBest(X, y)
+            elif 'PCA' in reduction_method:
+                X = self._PCA(X, y, feature_arguments)
+            elif 'RBM' in reduction_method:
+                X = self._RBM(X, y, feature_arguments)
 
         # normalize if set
         if self.normalize:
@@ -178,6 +178,7 @@ class DatasetManager(object):
         return X
 
     def _SelectKBest(self, X, y):
+
         from sklearn.feature_selection import SelectKBest, f_classif
 
         # ### Define the dimension reduction to be used.
@@ -297,6 +298,7 @@ class DatasetManager(object):
     def nnadl_prep(self):
         ''' Neural networks and deep learning tutorial data preparation
         '''
+        print('nnadl_preperation')
 
         X = self.X_processed
         y = self.y
@@ -311,7 +313,7 @@ class DatasetManager(object):
         y = np.reshape(y, (y.shape[0], y.shape[1], 1))
 
         self.X_processed = X
-        self.y = y
+        self.y_processed = y
 
     def vectorize(self, target, n_classes):
         y = np.zeros(shape=(target.shape[0], n_classes))

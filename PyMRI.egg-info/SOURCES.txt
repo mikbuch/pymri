@@ -19,13 +19,15 @@ pymri/gui/__init__.py
 pymri/gui/classification.py
 pymri/gui/ev_attributes.py
 pymri/gui/main_menu.py
+pymri/model/FNN.py
 pymri/model/__init__.py
-pymri/model/fnn.py
 pymri/model/fnn2.py
-pymri/model/network3.py
 pymri/model/test_fnn.py
 pymri/model/test_fnn2.py
 pymri/model/visualisation.py
+pymri/model/ann/__init__.py
+pymri/model/ann/simple.py
+pymri/model/ann/theano_script.py
 pymri/utils/__init__.py
 pymri/utils/attributes.py
 pymri/utils/h5py_data.py

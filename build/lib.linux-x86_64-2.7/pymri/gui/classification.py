@@ -6,26 +6,10 @@ import ttk
 
 
 # TODO: entire perform() function in subprocess to allow window to refresh
-
-def feature_choose(sel_ext_method):
-    if sel_ext_method == 'ROI mask':
-        ROI_frame.grid(row=3, column=0, columnspan=10, padx=20, pady=10)
-    else:
-        ROI_frame.grid_forget()
-
-    if sel_ext_method == 'Principal Component Analysis':
-        PCA_frame.grid(row=3, column=0, columnspan=10, padx=20, pady=10)
-    else:
-        PCA_frame.grid_forget()
-
-    if sel_ext_method == 'Restricted Boltzmann Machine':
-        RBM_frame.grid(row=3, column=0, columnspan=10, padx=20, pady=10)
-    else:
-        RBM_frame.grid_forget()
-
+# TODO: create separate classes for each section to keep it clear
 
 def classifier_choose(var_classifier_type):
-    if var_classifier_type == 'feedforward Artificial Neural Network (fANN)':
+    if 'fnn' in var_classifier_type:
         fANN_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
     else:
         fANN_frame.grid_forget()
@@ -50,6 +34,18 @@ def askfile(var):
 def askdir_output():
     dir_chosen = tkFileDialog.askdirectory()
     var_output.set(dir_chosen)
+
+
+def check_frame(frame, variable, check, text, row=0, column=1, columnspan=10):
+    if variable.get() == 1:
+        frame.grid(
+            row=row, column=column, columnspan=columnspan, sticky='W',
+            padx=10, pady=10, ipadx=10, ipady=10
+            )
+        check['text'] = ""
+    else:
+        frame.grid_forget()
+        check['text'] = text
 
 
 def perform():
@@ -156,6 +152,85 @@ def perform():
     #   VISUALIZE
     #
     ###########################################################################
+
+def load_data(mvpa_directory):
+
+    from pymri.dataset.datasets import DatasetManager
+
+    print('Loading database from %s' % mvpa_directory)
+    dataset = DatasetManager(
+        mvpa_directory = mvpa_directory,
+        # conditions has to be tuples
+        contrast=(
+            tuple(var_class_00.get().split(' ')),
+            tuple(var_class_01.get().split(' '))
+            )
+        )
+    return dataset
+
+def create_classifier():
+    '''
+    For some classifiers testing phase is joined with training for convinence.
+    '''
+
+    if 'fnn' in var_classifier_type.get():
+
+        from pymri.model import FNN
+
+        if 'simple' in var_classifier_type.get():
+            type = 'fnn simple'
+
+        if 'theano' in var_classifier_type.get():
+            type = 'fnn theano'
+
+        # all parameters - for net architecture as well as for its training
+        # has to be specified here (for reason see Classifier class)
+        cls = FNN(
+            type=type,
+            input_layer_size=var_k_features.get(),
+            hidden_layer_size=fANN_hn.get(),
+            output_layer_size=var_classes_number.get(),
+            epochs=fANN_epochs.get(),
+            minibatch_size=fANN_ms.get(),
+            learning_rate=fANN_eta.get()
+            )
+    return cls
+
+
+def feature_reduction(dataset, roi_path=None):
+
+    dataset.feature_reduction(
+        roi_path=roi_path,
+        k_features=var_k_features.get(),
+        reduction_method=var_reduction_method.get(),
+        normalize = var_normalize.get(),
+        nnadl=True
+        )
+
+    return dataset
+
+def split_data(dataset):
+
+    training_data, test_data, valid_data = dataset.split_data(
+        sizes=(1-LPO_p.get(), LPO_p.get())
+        )
+    return training_data, test_data
+
+
+def train_and_test_classifier(cls, training_data, test_data):
+    '''
+    Training and testing are somtimes bound with each other.
+    '''
+    cls.train_and_test(training_data, test_data)
+
+    return cls
+
+def get_best_accuracy(cls):
+    return cls.get_best_accuracy()
+
+def visualise_results(results):
+
+    import numpy as np
     import matplotlib.pyplot as plt
 
     mean_accuracies = np.zeros(shape=(LPO_n_times.get(),))
@@ -175,90 +250,157 @@ def perform():
     plt.legend(loc=3)
     plt.show()
 
+def perform_classification():
 
-def save():
-    import csv
-    with open('settings.log', 'wb') as csvfile:
+    import numpy as np
 
-        writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['Bold image', var_bold.get()])
-        writer.writerow(['Attributes text file', var_attr.get()])
-        writer.writerow(['Attributes literal text file', var_attr_lit.get()])
-        writer.writerow(['Mask brain', var_mask_brain.get()])
-        writer.writerow(['Condition (class) 00', var_class_00.get()])
-        writer.writerow(['Condition (class) 01', var_class_01.get()])
-
-        # FEATURE REDUCTION (SELECTION/EXTRACTION) VARIABLES
-        writer.writerow(['k features (reduction to k)', var_k_features.get()])
-        writer.writerow(['Normalize data', var_normalize.get()])
-        writer.writerow(['Feature reduction method', var_feature_method.get()])
-
-        writer.writerow(['ROI mask path', var_mask_roi.get()])
+    # subs_num = 21
+    # hands_num = 2
+    # rois_num = 2
+    # n_times_num = 100
 
 
-        # CLASSIFIER VARIABLES
-        writer.writerow(['Classifier type', var_classifier_type.get()])
+    # get list of subjects (can be one subject specifiedz or get the pattern
+    if '%' in subjects_names.get() and len(subjects.get().split(' ')) == 1:
+        subjects_pattern = subjects_names.get()
+    else:
+        subjects_lists = subjects_names.get().split(' ')
+        subs_num = len(subjects_lists)
 
-        writer.writerow(['fANN epochs', fANN_epochs.get()])
-        writer.writerow(['fANN hidden neurons', fANN_hn.get()])
-        writer.writerow(['fANN eta', fANN_eta.get()])
-        writer.writerow(['fANN minibatch size', fANN_ms.get()])
+    # get list of hands (can be only one hand) or get the pattern
+    if len(hands_names.get().split(' ')[0]) == 0:
+        hands_list = ['Left', 'Right']
+    else:
+        hands_list = hands_names.get().split(' ')
+    hands_num = len(hands_list)
+    
 
-        # PERFORMANCE VARIABLES
-        writer.writerow(['Performance measure', var_perform_type.get()])
+    # get list of rois
+    rois_list = rois_names.get().split(' ')
+    rois_num = len(rois_list)
 
-        writer.writerow(['LPO p', LPO_p.get()])
-        writer.writerow(['LPO n times', LPO_n_times.get()])
+    n_times_num = LPO_n_times.get()
+    
 
-        # OUTPUT VARIABLES
-        writer.writerow(['Output', var_output.get()])
+    # get the information required from Load_data and Classifier/Performance
+    # subs_num = subs_num.get()
+    # hands_num = hands_num.get()
+    # rois_num = rois_num.get()
+    # n_times_num = n_times_num.get()
 
-    print('Successfully saved!')
+    # create an array to store results of the classification performance
+    results = np.zeros(shape=(subs_num, hands_num, rois_num, n_times_num))
+
+    # for subject in number of subjects, etc.
+
+    for sub in range(subs_num):
+
+        for hand in range(hands_num):
+
+            mvpa_directory = \
+                schema.get() % (subjects_lists[sub], hands_list[hand])
+
+            print(mvpa_directory)
+            # load dataset using variables from load_data frame (load_data tab))
+            dataset = load_data(mvpa_directory)
+
+            for roi in range(rois_num):
+                # get the data from specified import ROIs
+                roi_path = mvpa_directory + rois_list[roi] + '.nii.gz'
+                dataset_reduced = feature_reduction(dataset, roi_path)
+
+                for n_time in range(n_times_num):
+                    # create Classifier specified in Classifier tab
+                    cls = create_classifier()
+
+                    # split dataset use Classifier/Performance settings
+                    training_data, test_data = split_data(dataset_reduced)
+
+                    # train and test classifier
+                    cls = train_and_test_classifier(
+                        cls, training_data, test_data
+                        )
+                    best_accuracy = get_best_accuracy(cls)
 
 
-def load():
-    import csv
-    read_data = []
-    with open('settings.log', 'rb') as csvfile:
-        spamreader = csv.reader(csvfile, delimiter=',')
-        for row in spamreader:
-            read_data.append(row)
+                    results[sub][hand][roi][n_time] = \
+                        best_accuracy / float(len(test_data))
 
-    var_bold.set(read_data[0][1])
-    var_attr.set(read_data[1][1])
-    var_attr_lit.set(read_data[2][1])
-    var_mask_brain.set(read_data[3][1])
-    var_class_00.set(read_data[4][1])
-    var_class_01.set(read_data[5][1])
+    return results
 
-    # FEATURE REDUCTION (SELECTION/EXTRACTION) VARIABLES
-    var_k_features.set(read_data[6][1])
-    var_normalize.set(read_data[7][1])
-    var_feature_method.set(read_data[8][1])
+def go():
+    # dataset = load_data()
+    perform_classification()
 
-    var_mask_roi.set(read_data[9][1])
+def save_config():
+    import ConfigParser
 
-    # CLASSIFIER VARIABLES
-    var_classifier_type.set(read_data[10][1])
+    config = ConfigParser.RawConfigParser()
 
-    fANN_epochs.set(read_data[11][1])
-    fANN_hn.set(read_data[12][1])
-    fANN_eta.set(read_data[13][1])
-    fANN_ms.set(read_data[14][1])
+    config.add_section('Load data')
+    config.set('Load data', 'Subjects', subjects_names.get())
+    config.set('Load data', 'Hands', hands_names.get())
+    config.set('Load data', 'Files schema', schema.get())
+    config.set('Load data', 'Class 00', var_class_00.get())
+    config.set('Load data', 'Class 01', var_class_01.get())
 
-    # PERFORMANCE VARIABLES
-    var_perform_type.set(read_data[15][1])
+    config.add_section('Classifier')
+    config.set('Classifier', 'Type', var_classifier_type.get())
+    config.set('Classifier', 'k features', var_k_features.get())
+    config.set('Classifier', 'Class number', var_classes_number.get())
+    config.set('Classifier', 'fnn epochs', fANN_epochs.get())
+    config.set('Classifier', 'fnn hidden neurons', fANN_hn.get())
+    config.set('Classifier', 'fnn minibatch size', fANN_ms.get())
+    config.set('Classifier', 'fnn learning rate', fANN_eta.get())
 
-    LPO_p.set(read_data[16][1])
-    LPO_n_times.set(read_data[17][1])
+    config.add_section('Performance')
+    config.set('Performance', 'Metrics method', var_perform_type.get())
+    config.set('Performance', 'LeavePOut', LPO_p.get())
+    config.set('Performance', 'n_times', LPO_n_times.get())
 
-    var_output.set(read_data[18][1])
+    config.add_section('Feature reduction')
+    config.set('Feature reduction', 'ROIs use', var_rois_frame.get())
+    config.set('Feature reduction', 'ROIs names', rois_names.get())
+    config.set('Feature reduction', 'k use', var_k_features_frame.get())
+    config.set('Feature reduction', 'k features', var_k_features.get())
+    config.set('Feature reduction', 'Normalize', var_normalize.get())
 
-    feature_choose(var_feature_method.get())
-    classifier_choose(var_classifier_type.get())
-    perform_choose(var_perform_type.get())
+    with open('pymri.cfg', 'wb') as configfile:
+        config.write(configfile)
 
-    print('Successfully loaded!')
+    print('Configuration successfully saved!')
+
+def load_config():
+    import ConfigParser
+
+    config = ConfigParser.RawConfigParser()
+    config.read('pymri.cfg')
+    subjects_names.set(config.get('Load data', 'Subjects'))
+    hands_names.set(config.get('Load data', 'Hands'))
+    schema.set(config.get('Load data', 'Files schema'))
+    var_class_00.set(config.get('Load data', 'Class 00'))
+    var_class_01.set(config.get('Load data', 'Class 01'))
+
+    var_classifier_type.set(config.get('Classifier', 'Type'))
+    var_k_features.set(config.get('Classifier', 'k features'))
+    var_classes_number.set(config.get('Classifier', 'Class number'))
+    fANN_epochs.set(config.get('Classifier', 'fnn epochs'))
+    fANN_hn.set(config.get('Classifier', 'fnn hidden neurons'))
+    fANN_ms.set(config.get('Classifier', 'fnn minibatch size'))
+    fANN_eta.set(config.get('Classifier', 'fnn learning rate'))
+
+    var_perform_type.set(config.get('Performance', 'Metrics method'))
+    LPO_p.set(config.get('Performance', 'LeavePOut'))
+    LPO_n_times.set(config.get('Performance', 'n_times'))
+
+    var_rois_frame.set(config.get('Feature reduction', 'ROIs use'))
+    rois_names.set(config.get('Feature reduction', 'ROIs names'))
+    var_k_features_frame.set(config.get('Feature reduction', 'k use'))
+    var_k_features.set(config.get('Feature reduction', 'k features'))
+    var_normalize.set(config.get('Feature reduction', 'Normalize'))
+
+
+    print('Configuration successfully loaded!')
 
 
 def quit():
@@ -320,82 +462,64 @@ note.grid(
     padx=20, pady=10, ipadx=10, ipady=10
     )
 
-# Input ###################################################################
+# Number of subjects and hands to test the classifier on ######################
 
-# file ####
-inFileLbl = tk.Label(
-    load_data_frame, text="Input bold file:", font=font_standard
-    )
-inFileLbl.grid(row=0, column=0, columnspan=2, sticky='E', padx=5, pady=5)
+# Specify subjects (list, or schema path) ###
 
-inFileTxt = tk.Entry(
-    load_data_frame, width=40, font=font_standard, textvariable=var_bold
-    )
-inFileTxt.grid(row=0, column=2, columnspan=8, sticky="WE", pady=5)
+# subjects_number variable is set in load_data() function
+subjects_number = tk.IntVar()
+subjects_names = tk.StringVar()
 
-inFileBtn = tk.Button(
-    load_data_frame,
-    command=lambda: askfile(var_bold),
-    text="Browse ...", font=font_standard
+subjects_lbl = tk.Label(
+    load_data_frame, text="Subjects:", font=font_standard
     )
-inFileBtn.grid(row=0, column=10, sticky='W', padx=5, pady=5)
+subjects_lbl.grid(
+    row=0, column=0, columnspan=2, sticky='E', padx=5, pady=5
+    )
 
-# attributes ####
-inAttrLbl = tk.Label(
-    load_data_frame, text="Attributs file:", font=font_standard
+subjects_txt = tk.Entry(
+    load_data_frame, width=40, font=font_standard, textvariable=subjects_names
     )
-inAttrLbl.grid(row=1, column=0, columnspan=2, sticky='E', padx=5, pady=5)
+subjects_txt.grid(row=0, column=2, columnspan=10, sticky="WE", pady=5)
 
-inAttrTxt = tk.Entry(
-    load_data_frame, width=40, font=font_standard, textvariable=var_attr
-    )
-inAttrTxt.grid(row=1, column=2, columnspan=8, sticky="WE", pady=5)
 
-inAttrBtn = tk.Button(
-    load_data_frame,
-    command=lambda: askfile(var_attr),
-    text="Browse ...", font=font_standard
-    )
-inAttrBtn.grid(row=1, column=10, sticky='W', padx=5, pady=5)
+# Specify hands (list them, if nothing set get both hands) ###
 
-# attributes literal ####
-inLiterLbl = tk.Label(
-    load_data_frame, text="Attributes literal file:", font=font_standard
-    )
-inLiterLbl.grid(row=2, column=0, columnspan=2, sticky='E', padx=5, pady=5)
+# hands_number variable is set in load_data() function
+hands_number = tk.IntVar()
+hands_names = tk.StringVar()
 
-inLiterTxt = tk.Entry(
-    load_data_frame, width=40, font=font_standard, textvariable=var_attr_lit
+hands_lbl = tk.Label(
+    load_data_frame, text="Hands:", font=font_standard
     )
-inLiterTxt.grid(row=2, column=2, columnspan=8, sticky="WE", pady=5)
+hands_lbl.grid(
+    row=1, column=0, columnspan=2, sticky='E', padx=5, pady=5
+    )
 
-inLiterBtn = tk.Button(
-    load_data_frame,
-    command=lambda: askfile(var_attr_lit),
-    text="Browse ...", font=font_standard
+hands_txt = tk.Entry(
+    load_data_frame, width=40, font=font_standard, textvariable=hands_names
     )
-inLiterBtn.grid(row=2, column=10, sticky='W', padx=5, pady=5)
+hands_txt.grid(row=1, column=2, columnspan=10, sticky="WE", pady=5)
 
-# mask brain regions ####
-inMaskBLbl = tk.Label(
-    load_data_frame, text="Mask brain region:", font=font_standard
-    )
-inMaskBLbl.grid(row=3, column=0, columnspan=2, sticky='E', padx=5, pady=5)
 
-inMaskBTxt = tk.Entry(
-    load_data_frame, width=40, font=font_standard, textvariable=var_mask_brain
-    )
-inMaskBTxt.grid(row=3, column=2, columnspan=8, sticky="WE", pady=5)
+# Files schema ###
 
-inMaskBBtn = tk.Button(
-    load_data_frame,
-    command=lambda: askfile(var_mask_brain),
-    text="Browse ...", font=font_standard
+schema = tk.StringVar()
+
+schema_lbl = tk.Label(
+    load_data_frame, text="Files schema:", font=font_standard
     )
-inMaskBBtn.grid(row=3, column=10, sticky='W', padx=5, pady=5)
+schema_lbl.grid(
+    row=2, column=0, columnspan=2, sticky='E', padx=5, pady=5
+    )
+
+schema_txt = tk.Entry(
+    load_data_frame, width=40, font=font_standard, textvariable=schema
+    )
+schema_txt.grid(row=2, column=2, columnspan=10, sticky="WE", pady=5)
 
 sep_paths_classes = ttk.Separator(load_data_frame, orient=tk.HORIZONTAL)
-sep_paths_classes.grid(row=4, column=1, columnspan=9, sticky='EW', pady=10)
+sep_paths_classes.grid(row=3, column=1, columnspan=9, sticky='EW', pady=10)
 
 
 # classes (contrasts) get ###
@@ -406,13 +530,13 @@ constrast_00_lbl = tk.Label(
     load_data_frame, text="Class 00:", font=font_standard
     )
 constrast_00_lbl.grid(
-    row=5, column=0, columnspan=2, sticky='E', padx=5, pady=5
+    row=4, column=0, columnspan=2, sticky='E', padx=5, pady=5
     )
 
 constast_00_txt = tk.Entry(
     load_data_frame, width=40, font=font_standard, textvariable=var_class_00
     )
-constast_00_txt.grid(row=5, column=2, columnspan=10, sticky="WE", pady=5)
+constast_00_txt.grid(row=4, column=2, columnspan=10, sticky="WE", pady=5)
 
 var_class_01 = tk.StringVar()
 
@@ -422,23 +546,26 @@ constrast_01_lbl = tk.Label(
     load_data_frame, text="Class 01:", font=font_standard
     )
 constrast_01_lbl.grid(
-    row=6, column=0, columnspan=2, sticky='E', padx=5, pady=5
+    row=5, column=0, columnspan=2, sticky='E', padx=5, pady=5
     )
 
 constast_01_txt = tk.Entry(
     load_data_frame, width=40, font=font_standard, textvariable=var_class_01
     )
-constast_01_txt.grid(row=6, column=2, columnspan=10, sticky="WE", pady=5)
+constast_01_txt.grid(row=5, column=2, columnspan=10, sticky="WE", pady=5)
 
 
+var_classes_number = tk.IntVar()
+var_classes_number.set(2)
 
-###########################################################################
+
+###############################################################################
 #
 #     FEATURE REDUCTION (SELECTION/EXTRACTION) FRAME
 #
-###########################################################################
+###############################################################################
 
-# Frame Setup #############################################################
+# Feature frame Setup #########################################################
 feature_frame = tk.Frame(note)
 feature_frame.grid(
     row=1, column=0, columnspan=10, sticky='WE',
@@ -452,22 +579,77 @@ note.grid(
     )
 
 
-# Fill frame ##############################################################
+# Fill feature frame ##########################################################
+
+# ROIs frame ###############################
+
+var_rois_frame = tk.IntVar()
+rois_text = "Regions of Intrest (ROIs)"
+
+rois_check = tk.Checkbutton(
+    feature_frame, text=rois_text, onvalue=1, offvalue=0,
+    command=lambda: check_frame(
+        rois_frame, var_rois_frame, rois_check, rois_text
+        ),
+    variable=var_rois_frame, font=font_standard
+    )
+rois_check.grid(row=0, column=0, columnspan=1, padx=10, pady=10, sticky='W')
+
+rois_frame = tk.LabelFrame(
+    feature_frame, borderwidth = font_size/6,
+    text=rois_text, font=font_standard
+    )
+
+
+# ROIs names
+rois_names = tk.StringVar()
+
+rois_lbl = tk.Label(
+    rois_frame, text="ROIs names:", font=font_standard
+    )
+rois_lbl.grid(
+    row=0, column=0, columnspan=1, sticky='E', padx=5, pady=5
+    )
+
+rois_entry = tk.Entry(
+    rois_frame, width=40, font=font_standard, textvariable=rois_names
+    )
+rois_entry.grid(row=0, column=2, columnspan=10, sticky="WE", pady=5)
+
+
+
+# Feature reduction frame ##################
+
+# Reduction method
+var_reduction_method = tk.StringVar()
+var_reduction_method.set('SelectKBest (SKB)')
+
+
+var_k_features_frame = tk.IntVar()
+k_features_text = "Feature reduction"
+
+k_features_check = tk.Checkbutton(
+    feature_frame, text=k_features_text, onvalue=1, offvalue=0,
+    command=lambda: check_frame(
+        k_features_frame, var_k_features_frame,
+        k_features_check, k_features_text, row=1
+        ),
+    variable=var_k_features_frame, font=font_standard
+    )
+k_features_check.grid(row=1, column=0, columnspan=1, padx=10, pady=10, sticky='W')
+
+k_features_frame = tk.LabelFrame(
+    feature_frame, borderwidth = font_size/6,
+    text=k_features_text, font=font_standard
+    )
 
 var_k_features = tk.IntVar()
 
-k_features_frame = tk.Frame(
-    feature_frame, borderwidth=font_size/6
-    )
-k_features_frame.grid(
-    padx=20, pady=20, ipadx=10, ipady=10
-    )
-
-k_features_label = tk.Label(
+k_label = tk.Label(
     k_features_frame,
     text="Reduct to (extract/select) n features:", font=font_standard
     )
-k_features_label.grid(row=0, column=0, sticky='W')
+k_label.grid(row=0, column=0, sticky='W')
 
 k_features_entry = tk.Entry(
     k_features_frame, width=4, textvariable=var_k_features, font=font_standard
@@ -477,125 +659,128 @@ k_features_entry.grid(row=0, column=1)
 # Normalize data ###
 var_normalize = tk.IntVar()
 
-normalize_chk = tk.Checkbutton(
+normalize_check = tk.Checkbutton(
     feature_frame,
     text="Normalize data", onvalue=1, offvalue=0,
     variable=var_normalize,
     font=font_standard
     )
-normalize_chk.grid(
-    row=1, column=0, padx=10, pady=10, sticky='W'
+normalize_check.grid(
+    row=3, column=0, columnspan=3, padx=10, pady=10, sticky='W'
     )
 
-# Feature Selection/Extraction method ###
-var_feature_method = tk.StringVar()
-var_feature_method.set("SelectKBest (SKB)")
-feature_arguments=None
-
-feature_option = tk.OptionMenu(
-    feature_frame, var_feature_method,
-    "SelectKBest (SKB)",
-    "ROI mask",
-    "Principal Component Analysis (PCA)",
-    "Restricted Boltzmann Machine (RBM)",
-    command=feature_choose
-    )
-feature_option.grid(row=2, stick='W', padx='20')
-feature_option.configure(font=font_standard)
-
-# ROI mask feature selection method ###
-ROI_frame = tk.Frame(feature_frame)
-
-var_mask_roi = tk.StringVar()
-
-ROI_label = tk.Label(
-    ROI_frame, text="Mask file:", font=font_standard
-    )
-ROI_label.grid(row=0, column=0, sticky='E', padx=5, pady=5)
-
-ROI_entry = tk.Entry(
-    ROI_frame, width=40, font=font_standard, textvariable=var_mask_roi
-    )
-ROI_entry.grid(row=0, column=1, columnspan=8, sticky="W", padx=5, pady=5)
-
-ROI_button = tk.Button(
-    ROI_frame,
-    command=lambda: askfile(var_mask_roi),
-    text="Browse ...", font=font_standard
-    )
-ROI_button.grid(row=0, column=10, sticky='W', padx=5, pady=5)
-
-# PCA feature extraction method ###
-PCA_frame = tk.Frame(feature_frame)
-
-PCA_whiten = tk.BooleanVar()
-PCA_chk_whiten = tk.Checkbutton(
-    PCA_frame, text="whiten", variable=PCA_whiten, font=font_standard)
-PCA_chk_whiten.grid(row=3, column=1)
 
 
-# RBM feature extraction method ###
-RBM_frame = tk.Frame(feature_frame)
 
-# learning rate
-RBM_lr = tk.StringVar()
-RBM_lr.set('0.1')
-RBM_lr_label = tk.Label(
-    RBM_frame, text="Learning rate:", font=font_standard
-    )
-RBM_lr_label.grid(row=0, column=0, padx=5, pady=2)
-RBM_lr_entry = tk.Entry(
-    RBM_frame, width=5, font=font_standard, textvariable=RBM_lr
-    )
-RBM_lr_entry.grid(row=0, column=1, pady=2)
+# # Feature Selection/Extraction method ###
+# var_feature_method = tk.StringVar()
+# var_feature_method.set("SelectKBest (SKB)")
+# feature_arguments=None
 
-# batch size
-RBM_bs = tk.StringVar()
-RBM_bs.set('10')
-RBM_bs_label = tk.Label(
-    RBM_frame, text="Batch size:", font=font_standard
-    )
-RBM_bs_label.grid(row=0, column=2, padx=5, pady=2)
-RBM_bs_entry = tk.Entry(
-    RBM_frame, width=5, font=font_standard, textvariable=RBM_bs
-    )
-RBM_bs_entry.grid(row=0, column=3, pady=2)
+# feature_option = tk.OptionMenu(
+    # feature_frame, var_feature_method,
+    # "SelectKBest (SKB)",
+    # "ROI mask",
+    # "Principal Component Analysis (PCA)",
+    # "Restricted Boltzmann Machine (RBM)",
+    # command=feature_choose
+    # )
+# feature_option.grid(row=2, stick='W', padx='20')
+# feature_option.configure(font=font_standard)
 
-# n_iter
-RBM_ni = tk.StringVar()
-RBM_ni.set('10')
-RBM_ni_label = tk.Label(
-    RBM_frame, text="n_iter:", font=font_standard
-    )
-RBM_ni_label.grid(row=0, column=4, padx=5, pady=2)
-RBM_ni_entry = tk.Entry(
-    RBM_frame, width=4, font=font_standard, textvariable=RBM_ni
-    )
-RBM_ni_entry.grid(row=0, column=5, pady=2)
+# # ROI mask feature selection method ###
+# ROI_frame = tk.Frame(feature_frame)
 
-# verbose
-RBM_ver = tk.StringVar()
-RBM_ver.set('0')
-RBM_ver_label = tk.Label(
-    RBM_frame, text="verbose:", font=font_standard
-    )
-RBM_ver_label.grid(row=1, column=0, sticky='E', padx=5, pady=2)
-RBM_ver_entry = tk.Entry(
-    RBM_frame, width=5, font=font_standard, textvariable=RBM_ver
-    )
-RBM_ver_entry.grid(row=1, column=1, pady=2)
+# var_mask_roi = tk.StringVar()
 
-# random state
-RBM_rs = tk.StringVar()
-RBM_rs.set('None')
-RBM_rs_label = tk.Label(
-    RBM_frame, text="n_iter:", font=font_standard
-    )
-RBM_rs_label.grid(row=1, column=2, padx=5, pady=2)
-RBM_rs_entry = tk.Entry(
-    RBM_frame, width=5, font=font_standard, textvariable=RBM_rs
-    )
-RBM_rs_entry.grid(row=1, column=3, pady=2)
+# ROI_label = tk.Label(
+    # ROI_frame, text="Mask file:", font=font_standard
+    # )
+# ROI_label.grid(row=0, column=0, sticky='E', padx=5, pady=5)
+
+# ROI_entry = tk.Entry(
+    # ROI_frame, width=40, font=font_standard, textvariable=var_mask_roi
+    # )
+# ROI_entry.grid(row=0, column=1, columnspan=8, sticky="W", padx=5, pady=5)
+
+# ROI_button = tk.Button(
+    # ROI_frame,
+    # command=lambda: askfile(var_mask_roi),
+    # text="Browse ...", font=font_standard
+    # )
+# ROI_button.grid(row=0, column=10, sticky='W', padx=5, pady=5)
+
+# # PCA feature extraction method ###
+# PCA_frame = tk.Frame(feature_frame)
+
+# PCA_whiten = tk.BooleanVar()
+# PCA_chk_whiten = tk.Checkbutton(
+    # PCA_frame, text="whiten", variable=PCA_whiten, font=font_standard)
+# PCA_chk_whiten.grid(row=3, column=1)
+
+
+# # RBM feature extraction method ###
+# RBM_frame = tk.Frame(feature_frame)
+
+# # learning rate
+# RBM_lr = tk.StringVar()
+# RBM_lr.set('0.1')
+# RBM_lr_label = tk.Label(
+    # RBM_frame, text="Learning rate:", font=font_standard
+    # )
+# RBM_lr_label.grid(row=0, column=0, padx=5, pady=2)
+# RBM_lr_entry = tk.Entry(
+    # RBM_frame, width=5, font=font_standard, textvariable=RBM_lr
+    # )
+# RBM_lr_entry.grid(row=0, column=1, pady=2)
+
+# # batch size
+# RBM_bs = tk.StringVar()
+# RBM_bs.set('10')
+# RBM_bs_label = tk.Label(
+    # RBM_frame, text="Batch size:", font=font_standard
+    # )
+# RBM_bs_label.grid(row=0, column=2, padx=5, pady=2)
+# RBM_bs_entry = tk.Entry(
+    # RBM_frame, width=5, font=font_standard, textvariable=RBM_bs
+    # )
+# RBM_bs_entry.grid(row=0, column=3, pady=2)
+
+# # n_iter
+# RBM_ni = tk.StringVar()
+# RBM_ni.set('10')
+# RBM_ni_label = tk.Label(
+    # RBM_frame, text="n_iter:", font=font_standard
+    # )
+# RBM_ni_label.grid(row=0, column=4, padx=5, pady=2)
+# RBM_ni_entry = tk.Entry(
+    # RBM_frame, width=4, font=font_standard, textvariable=RBM_ni
+    # )
+# RBM_ni_entry.grid(row=0, column=5, pady=2)
+
+# # verbose
+# RBM_ver = tk.StringVar()
+# RBM_ver.set('0')
+# RBM_ver_label = tk.Label(
+    # RBM_frame, text="verbose:", font=font_standard
+    # )
+# RBM_ver_label.grid(row=1, column=0, sticky='E', padx=5, pady=2)
+# RBM_ver_entry = tk.Entry(
+    # RBM_frame, width=5, font=font_standard, textvariable=RBM_ver
+    # )
+# RBM_ver_entry.grid(row=1, column=1, pady=2)
+
+# # random state
+# RBM_rs = tk.StringVar()
+# RBM_rs.set('None')
+# RBM_rs_label = tk.Label(
+    # RBM_frame, text="n_iter:", font=font_standard
+    # )
+# RBM_rs_label.grid(row=1, column=2, padx=5, pady=2)
+# RBM_rs_entry = tk.Entry(
+    # RBM_frame, width=5, font=font_standard, textvariable=RBM_rs
+    # )
+# RBM_rs_entry.grid(row=1, column=3, pady=2)
 
 
 ###########################################################################
@@ -615,16 +800,16 @@ note.grid(
 
 # Fill frame ##############################################################
 var_classifier_type = tk.StringVar()
-var_classifier_type.set("feedforward Artificial Neural Network (fANN)")
+var_classifier_type.set("Feedforward Neural Network - simple python script (fnn simple)")
 
 classifier_option = tk.OptionMenu(
     classifier_frame, var_classifier_type,
-    "feedforward Artificial Neural Network (fANN)",
+    "Feedforward Neural Network - simple python script (fnn simple)",
+    "Feedforward Neural Network - theano version (fnn theano)",
     "Convolutional Neural Network (CNN)",
     "Supported Vector Classifier (SVC)",
     "Linear Discriminant Analysis (LDA)",
     "Quadratic Discriminant Analysis (QDA)",
-    "theano fnn",
     command=classifier_choose
     )
 classifier_option.grid(row=1, stick='WS', padx='20')
@@ -787,21 +972,21 @@ options.grid(
 
 go = tk.Button(
     options,
-    command=perform,
+    command=go,
     text=" Go ", font=font_standard
     )
 go.grid(row=4, column=0, padx=10, pady=10)
 
 save = tk.Button(
     options,
-    command=save,
+    command=save_config,
     text="Save", font=font_standard
     )
 save.grid(row=4, column=1, padx=10, pady=10)
 
 load = tk.Button(
     options,
-    command=load,
+    command=load_config,
     text="Load", font=font_standard
     )
 load.grid(row=4, column=2, padx=10, pady=10)

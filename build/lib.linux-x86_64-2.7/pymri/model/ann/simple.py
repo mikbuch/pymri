@@ -36,7 +36,7 @@ class Network(object):
                         for x, y in zip(sizes[:-1], sizes[1:])]
         self.best_biases = self.biases
         self.best_weights = self.weights
-        self.best_score = 0
+        self.best_accuracy = 0
 
     def feedforward(self, a):
         """Return the output of the network if ``a`` is input."""
@@ -65,8 +65,8 @@ class Network(object):
                 self.update_mini_batch(mini_batch, eta)
             if test_data:
                 score = self.evaluate(test_data)
-                if score > self.best_score:
-                    self.best_score = score
+                if score > self.best_accuracy:
+                    self.best_accuracy = score
                     self.best_biases = self.biases
                     self.best_weights = self.weights
                 print "Epoch {0}: {1} / {2}".format(
