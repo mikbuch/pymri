@@ -7,6 +7,7 @@ Inputs are taken using DataGrabber interface.
 
 '''
 
+
 ###############################################################################
 #
 #      CREATE MAIN WORKFLOW
@@ -72,7 +73,7 @@ merge = Node(
     interface=fsl.utils.Merge(
         dimension='t',
         output_type='NIFTI_GZ',
-        merged_file='merged.nii.gz'
+        merged_file='bold.nii.gz'
         ),
     name='merge'
     )
@@ -80,18 +81,22 @@ featreg_merge.connect(
     preproc, 'outputspec.highpassed_files', merge, 'in_files'
     )
 
+
 ###############################################################################
 #
-#     DATA SINKER NODE
+#     DATA SINK NODE
 #
 ###############################################################################
 
-from nipype.interfaces.io import DataSinker
+from nipype.interfaces.io import DataSink
 
 datasink = Node(interface=DataSink(), name='datasink')
 datasink.inputs.base_directory = opap('/tmp/sinks')
 
-featreg_merge.connect(merge, 'merged_file', datasink, 'bold')
+featreg_merge.connect(
+    merge, 'merged_file',
+    datasink, ds.inputs.subject_id + '/' + ds.inputs.hand + '_Hand/mvpa'
+    )
 
 
 ###############################################################################
@@ -103,4 +108,5 @@ featreg_merge.connect(merge, 'merged_file', datasink, 'bold')
 featreg_merge.base_dir = '/tmp/working_dir'
 featreg_merge.write_graph("graph.dot")
 
-featreg_merge.run()
+# Uncomment the last line to run workflow.
+# featreg_merge.run()
