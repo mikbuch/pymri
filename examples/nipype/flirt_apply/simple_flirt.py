@@ -1,11 +1,11 @@
 '''
 name:
-flirt_apply_xfm.py
+simple_flirt.py
 
 type:
-script.py
+script
 
-FSL FLIRT apply transform
+FSL FLIRT apply transform (simple example)
 '''
 
 from nipype.interfaces import fsl

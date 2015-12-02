@@ -1,5 +1,5 @@
 """
-neural-networks-and-deep-learning dataset generation (transformation)
+Generate Dataset for PyMRI
 """
 
 __author__ = "Mikolaj Buchwald"
@@ -135,8 +135,12 @@ class DatasetManager(object):
         # target
         y = self.y
 
-        if roi_path:
-            X = self._roi_mask_apply(X, roi_path)
+        if roi_path and roi_path != '':
+            if reduction_method:
+                if 'mask' in reduction_method:
+                    X = self._SelectKHighest_from_mask(X, y, roi_path)
+            else:
+                X = self._roi_mask_apply(X, roi_path)
 
         if reduction_method:
             # ROI selection (feature reduction) method to be applied
@@ -193,6 +197,27 @@ class DatasetManager(object):
 
         return X
 
+    def _SelectKHighest_from_mask(self, X, y, roi_path):
+
+        print('Getting k highest from mask: %s' % roi_path)
+
+        # roi_mask = masking.apply_mask(
+            # roi_path, self.mask_non_brain, k_features=self.k_features
+            # )
+
+        roi_mask = masking.apply_mask(roi_path, self.mask_non_brain)
+
+        from pymri.utils.masking import separate_k_highest
+
+        roi_mask = separate_k_highest(self.k_features, roi_mask)
+
+        roi_mask = roi_mask.astype(bool)
+
+        X = X[..., roi_mask]
+
+        self.feature_reduction_method = '%d %s' % (self.k_features, roi_path)
+        return X
+
     def _PCA(self, X, y):
 
         if X.shape[0] >= self.k_features:
@@ -229,18 +254,16 @@ class DatasetManager(object):
 
         return X
 
-    # TODO: finish this one
-    def _roi_mask_apply(self, X, feature_arguments):
-        roi_mask_img = feature_arguments
+    def _roi_mask_apply(self, X, roi_path):
 
-        # roi_mask_img = nibabel.load(roi_mask_img)
+        print('Applying mask: %s' % roi_path)
 
-        roi_mask = masking.apply_mask(roi_mask_img, self.mask_non_brain)
+        roi_mask = masking.apply_mask(roi_path, self.mask_non_brain)
         roi_mask = roi_mask.astype(bool)
 
         X = X[..., roi_mask]
 
-        self.feature_reduction_method = roi_mask
+        self.feature_reduction_method = roi_path
 
         return X
 

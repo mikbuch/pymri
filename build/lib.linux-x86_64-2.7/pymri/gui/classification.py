@@ -199,6 +199,7 @@ def create_classifier():
 
 def feature_reduction(dataset, roi_path=None):
 
+    print('\n\n%s\n\n' % var_reduction_method.get())
     dataset.feature_reduction(
         roi_path=roi_path,
         k_features=var_k_features.get(),
@@ -306,7 +307,7 @@ def perform_classification():
 
             for roi in range(rois_num):
                 # get the data from specified import ROIs
-                roi_path = mvpa_directory + rois_list[roi] + '.nii.gz'
+                roi_path = mvpa_directory + 'ROIs/' + rois_list[roi] + '.nii.gz'
                 dataset_reduced = feature_reduction(dataset, roi_path)
 
                 for n_time in range(n_times_num):
@@ -321,11 +322,14 @@ def perform_classification():
                         cls, training_data, test_data
                         )
                     best_accuracy = get_best_accuracy(cls)
+                    del cls
 
 
                     results[sub][hand][roi][n_time] = \
                         best_accuracy / float(len(test_data))
 
+    import pdb
+    pdb.set_trace()
     return results
 
 def go():
@@ -363,6 +367,7 @@ def save_config():
     config.set('Feature reduction', 'ROIs names', rois_names.get())
     config.set('Feature reduction', 'k use', var_k_features_frame.get())
     config.set('Feature reduction', 'k features', var_k_features.get())
+    config.set('Feature reduction', 'method', var_reduction_method.get())
     config.set('Feature reduction', 'Normalize', var_normalize.get())
 
     with open('pymri.cfg', 'wb') as configfile:
@@ -397,6 +402,7 @@ def load_config():
     rois_names.set(config.get('Feature reduction', 'ROIs names'))
     var_k_features_frame.set(config.get('Feature reduction', 'k use'))
     var_k_features.set(config.get('Feature reduction', 'k features'))
+    var_reduction_method.set(config.get('Feature reduction', 'method'))
     var_normalize.set(config.get('Feature reduction', 'Normalize'))
 
 
@@ -621,9 +627,6 @@ rois_entry.grid(row=0, column=2, columnspan=10, sticky="WE", pady=5)
 # Feature reduction frame ##################
 
 # Reduction method
-var_reduction_method = tk.StringVar()
-var_reduction_method.set('SelectKBest (SKB)')
-
 
 var_k_features_frame = tk.IntVar()
 k_features_text = "Feature reduction"
@@ -655,6 +658,20 @@ k_features_entry = tk.Entry(
     k_features_frame, width=4, textvariable=var_k_features, font=font_standard
     )
 k_features_entry.grid(row=0, column=1)
+
+# Feature reduction method
+var_reduction_method = tk.StringVar()
+var_reduction_method.set("SelectKHighest from mask (SKH)")
+
+feature_option = tk.OptionMenu(
+    k_features_frame, var_reduction_method,
+    "SelectKHighest from mask (SKH)",
+    "SelectKBest (SKB)",
+    # "Principal Component Analysis (PCA)",
+    # "Restricted Boltzmann Machine (RBM)",
+    )
+feature_option.grid(row=1, stick='W', padx='20')
+feature_option.configure(font=font_standard)
 
 # Normalize data ###
 var_normalize = tk.IntVar()

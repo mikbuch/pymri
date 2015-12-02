@@ -13,7 +13,7 @@ import nibabel
 ###############################################################################
 
 def apply_mask(niimgs, mask_img, dtype=np.float32,
-                     smoothing_fwhm=None, ensure_finite=True):
+                     smoothing_fwhm=None, ensure_finite=True, k_features=None):
     """Extract signals from images using specified mask.
 
     Read the time series from the given nifti images or filepaths,
@@ -168,3 +168,60 @@ def unmask(X, mask_img, order="C"):
         data[mask_data, :] = X.T
         return data
     raise ValueError("X must be 1-dimensional or 2-dimensional")
+
+def separate_k_highest(k_features, mask_img):
+    """Extract signals from images using specified mask.
+
+    Read the time series from the given nifti images or filepaths,
+    using the mask.
+
+    Parameters
+    -----------
+    mask_img: niimg
+        3D mask array: True where a voxel should be used.
+
+    smoothing_fwhm: float
+        (optional) Gives the size of the spatial smoothing to apply to
+        the signal, in voxels. Implies ensure_finite=True.
+
+    ensure_finite: bool
+        If ensure_finite is True (default), the non-finite values (NaNs and
+        infs) found in the images will be replaced by zeros.
+
+    Returns
+    --------
+    session_series: numpy.ndarray
+        2D array of series with shape (image number, voxel number)
+
+    Notes
+    -----
+    When using smoothing, ensure_finite is set to True, as non-finite
+    values would spread accross the image.
+    """
+
+    # if isinstance(mask_img, basestring):
+        # mask_img = nibabel.load(mask_img)
+    # mask_data = mask_img.get_data()
+    # mask_affine = mask_img.get_affine()
+
+    mask_data = mask_img
+
+    mask_flatten = mask_data.flatten()
+
+    value_at_k = mask_flatten.argsort()[-k_features]
+
+    mask_k_ed = np.array(mask_flatten>mask_flatten[value_at_k])
+
+    # There are still some values missing
+    missing = k_features - mask_k_ed.sum()
+
+    # Get all the exact values
+    exact_values = np.array(mask_flatten==mask_flatten[value_at_k])
+    # Limit to the number of missing values
+    exact_values = exact_values.argsort()[-missing:]
+
+    mask_k_ed[exact_values] = True
+
+    mask_k_ed = mask_k_ed.reshape(mask_data.shape)
+
+    return mask_k_ed
