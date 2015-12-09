@@ -97,7 +97,7 @@ input_roi_standard = Node(
     )
 input_roi_standard.iterables = (
     'roi_standard',
-    get_roi_standard(base_directory + '/mvpa/ROIs_standard')
+    get_roi_standard(base_directory + '/mvpa/ROIs_standard_space')
     )
 
 
@@ -196,6 +196,7 @@ datasink = Node(interface=DataSink(), name='datasink')
 # datasink.inputs.base_directory = opap(base_directory)
 datasink.inputs.base_directory = opap('/tmp/sinks')
 datasink.inputs.parameterization = False
+datasink.inputs.substitutions = [('', ''), ('_flirt', '')]
 
 '''
 If iterating trought hands will be available
