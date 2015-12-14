@@ -1,0 +1,438 @@
+[
+    {
+        "group": 1, 
+        "imports": [], 
+        "name": "00_datasource", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "00_datasource"
+        ], 
+        "name": "01_img2float", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "01_img2float"
+        ], 
+        "name": "02_realign", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "02_realign"
+        ], 
+        "name": "03_meanfunc", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "02_realign"
+        ], 
+        "name": "04_plot_motion", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "02_realign"
+        ], 
+        "name": "05_plot_motion", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "03_meanfunc"
+        ], 
+        "name": "06_meanfuncmask", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "06_meanfuncmask", 
+            "02_realign"
+        ], 
+        "name": "07_maskfunc", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "07_maskfunc"
+        ], 
+        "name": "08_getthreshold", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "07_maskfunc", 
+            "08_getthreshold"
+        ], 
+        "name": "09_threshold", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "09_threshold", 
+            "02_realign"
+        ], 
+        "name": "10_medianval", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "09_threshold"
+        ], 
+        "name": "11_dilatemask", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "11_dilatemask", 
+            "02_realign"
+        ], 
+        "name": "12_maskfunc2", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "12_maskfunc2", 
+            "11_dilatemask"
+        ], 
+        "name": "13_median", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "12_maskfunc2", 
+            "11_dilatemask"
+        ], 
+        "name": "14_mask", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "14_mask"
+        ], 
+        "name": "15_meanfunc2", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "15_meanfunc2", 
+            "13_median"
+        ], 
+        "name": "16_merge", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "12_maskfunc2", 
+            "16_merge", 
+            "13_median"
+        ], 
+        "name": "17_smooth", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "17_smooth", 
+            "11_dilatemask"
+        ], 
+        "name": "18_maskfunc3", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "12_maskfunc2", 
+            "18_maskfunc3"
+        ], 
+        "name": "19_concat", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "19_concat"
+        ], 
+        "name": "20_select", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "10_medianval", 
+            "20_select"
+        ], 
+        "name": "21_meanscale", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "21_meanscale"
+        ], 
+        "name": "22_meanfunc3", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "21_meanscale"
+        ], 
+        "name": "23_highpass", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "23_highpass"
+        ], 
+        "name": "24_merge", 
+        "size": 1
+    }, 
+    {
+        "group": 1, 
+        "imports": [
+            "24_merge"
+        ], 
+        "name": "25_datasink", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [], 
+        "name": "26_datasource", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "26_datasource"
+        ], 
+        "name": "27_img2float", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "27_img2float"
+        ], 
+        "name": "28_realign", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "28_realign"
+        ], 
+        "name": "29_plot_motion", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "28_realign"
+        ], 
+        "name": "30_plot_motion", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "28_realign"
+        ], 
+        "name": "31_meanfunc", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "31_meanfunc"
+        ], 
+        "name": "32_meanfuncmask", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "32_meanfuncmask", 
+            "28_realign"
+        ], 
+        "name": "33_maskfunc", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "33_maskfunc"
+        ], 
+        "name": "34_getthreshold", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "33_maskfunc", 
+            "34_getthreshold"
+        ], 
+        "name": "35_threshold", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "35_threshold", 
+            "28_realign"
+        ], 
+        "name": "36_medianval", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "35_threshold"
+        ], 
+        "name": "37_dilatemask", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "28_realign", 
+            "37_dilatemask"
+        ], 
+        "name": "38_maskfunc2", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "38_maskfunc2", 
+            "37_dilatemask"
+        ], 
+        "name": "39_median", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "38_maskfunc2", 
+            "37_dilatemask"
+        ], 
+        "name": "40_mask", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "40_mask"
+        ], 
+        "name": "41_meanfunc2", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "39_median", 
+            "41_meanfunc2"
+        ], 
+        "name": "42_merge", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "39_median", 
+            "42_merge", 
+            "38_maskfunc2"
+        ], 
+        "name": "43_smooth", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "43_smooth", 
+            "37_dilatemask"
+        ], 
+        "name": "44_maskfunc3", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "38_maskfunc2", 
+            "44_maskfunc3"
+        ], 
+        "name": "45_concat", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "45_concat"
+        ], 
+        "name": "46_select", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "36_medianval", 
+            "46_select"
+        ], 
+        "name": "47_meanscale", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "47_meanscale"
+        ], 
+        "name": "48_meanfunc3", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "47_meanscale"
+        ], 
+        "name": "49_highpass", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "49_highpass"
+        ], 
+        "name": "50_merge", 
+        "size": 1
+    }, 
+    {
+        "group": 2, 
+        "imports": [
+            "50_merge"
+        ], 
+        "name": "51_datasink", 
+        "size": 1
+    }
+]

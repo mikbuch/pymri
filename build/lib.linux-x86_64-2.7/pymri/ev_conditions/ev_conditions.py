@@ -22,6 +22,7 @@ def get_attributes(
         tr,
         output_dir='./',
         format='mac',
+        quiet=True
         ):
     """Get Explanatory Variables attributes from standard EV files.
 
@@ -70,6 +71,7 @@ def get_attributes(
     import re
 
     for path_absolute in paths:
+
         # get only the filename, not the absolute path
         ev_filename = re.sub(input_dir, '', path_absolute)
 
@@ -126,10 +128,13 @@ def get_attributes(
     evs = runs
 
     # write to file
-    with open(output_dir + 'attributes_literal.txt', 'wb') as outfile:
+    attributes_literal_output = output_dir + 'attributes_literal.txt'
+    with open(attributes_literal_output, 'wb') as outfile:
         csv_writer = csv.writer(outfile, delimiter=' ')
         for run in volumen_condition:
             csv_writer.writerows(run)
+    if not quiet:
+        print('Successfully generated file: %s' % attributes_literal_output)
 
     # specify the conditions' integer representation to further encoding
     conditions = {
@@ -155,10 +160,13 @@ def get_attributes(
 
     # Write encoded conditions.
     # First number (column) is condition code, second column is run number.
-    with open(output_dir + 'attributes.txt', 'wb') as outfile:
+    attributes_output = output_dir + 'attributes.txt'
+    with open(attributes_output, 'wb') as outfile:
         csv_writer = csv.writer(outfile, delimiter=' ')
         for run in attributes:
             csv_writer.writerows(run)
+    if not quiet:
+        print('Successfully generated file: %s' % attributes_output)
 
     # # return for debugging
     # return attributes, volumen_condition

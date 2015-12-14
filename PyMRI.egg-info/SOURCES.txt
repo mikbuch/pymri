@@ -30,4 +30,5 @@ pymri/utils/attributes.py
 pymri/utils/h5py_data.py
 pymri/utils/masking.py
 pymri/utils/merge_nifti.py
+pymri/utils/paths_dirs_info.py
 pymri/utils/signal.py

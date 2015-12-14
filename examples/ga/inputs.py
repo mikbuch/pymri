@@ -129,7 +129,7 @@ toolbox.register("select", tools.selRoulette)
 def main():
     # random.seed(64)
 
-    # create an initial population of 300 individuals (where
+    # create an initial population of 50 individuals (where
     # each individual is a list of integers)
     pop = toolbox.population(n=50)
 

@@ -1,11 +1,11 @@
 '''
-sub_hand_preproc_merged.py
-script
+name: sub_hand_preproc_merged.py
+type: script
 
 Perform Feat preprocessing on given data files and then merge ouputs.
 Inputs are taken using DataGrabber interface.
 
-Specify base_direcory and pattern (template) for the subject.
+Specify base_directory and pattern (template) for the subject.
 
 '''
 
@@ -15,8 +15,25 @@ Specify base_direcory and pattern (template) for the subject.
 #
 ###############################################################################
 
+'''
+From where to take files to preprocess.
+'''
 # base_directory = '/Users/AClab/Documents/mikbuch/Maestro_Project1'
 base_directory = '/tmp/Maestro_Project1'
+
+'''
+Where to put workflow outputs that we need.
+Desired path is the one from which we have taken files initially.
+Specifying here other directory is considered debugging operation.
+'''
+# datasink_directory = base_directory
+datasink_directory = '/tmp/sinks'
+
+'''
+Place where all files created and required by workflow will be stored.
+'''
+workflow_base_directory = '/tmp/working_dir'
+
 
 subject_template = 'GK'
 
@@ -147,6 +164,32 @@ featreg_merge.connect(
     preproc, 'outputspec.highpassed_files', merge, 'in_files'
     )
 
+masksnode = Node(
+    interface=fsl.utils.Merge(
+        dimension='t',
+        output_type='NIFTI_GZ',
+        merged_file='masks_merged.nii.gz'
+        ),
+    name='masksnode'
+    )
+featreg_merge.connect(
+    preproc, 'outputspec.mask', masksnode, 'in_files'
+    )
+
+# ### SPLIT MERGED MASKS ######################################################
+
+splitnode = Node(
+    interface=fsl.utils.Split(
+        dimension='t',
+        output_type='NIFTI_GZ'
+        ),
+    name='splitnode'
+    )
+featreg_merge.connect(
+    masksnode, 'merged_file',
+    splitnode, 'in_file'
+    )
+
 
 ###############################################################################
 #
@@ -167,12 +210,6 @@ add_two_strings_node = Node(
     name='ats'
     )
 
-from nipype.interfaces.io import DataSink
-
-datasink = Node(interface=DataSink(), name='datasink')
-datasink.inputs.base_directory = opap('/tmp/sinks')
-datasink.inputs.parameterization = False
-
 '''
 If iterating trought hands will be available
 '''
@@ -184,11 +221,17 @@ meta.connect(
     inputhand, 'hand',
     add_two_strings_node, 'hand'
     )
+
+from nipype.interfaces.io import DataSink
+
+datasink = Node(interface=DataSink(), name='datasink')
+datasink.inputs.base_directory = opap(datasink_directory)
+datasink.inputs.parameterization = False
+
 meta.connect(
     add_two_strings_node, 'sub_hand_name',
     datasink, 'container'
     )
-
 
 meta.connect(
     featreg_merge, 'merge.merged_file',
@@ -198,14 +241,40 @@ meta.connect(
 # meta.connect(inputsub, 'sub', datasink, 'container')
 
 
+datasink_masks = Node(interface=DataSink(), name='datasink_masks')
+datasink_masks.inputs.base_directory = opap(datasink_directory)
+datasink_masks.inputs.parameterization = False
+datasink_masks.inputs.substitutions = [('', ''), ('vol0000', 'mask')]
+
+meta.connect(
+    add_two_strings_node, 'sub_hand_name',
+    datasink_masks, 'container'
+    )
+
+
+# Pick first file from out (or in) files.
+def pickfirst(files):
+    if isinstance(files, list):
+        return files[0]
+    else:
+        return files
+
+meta.connect(
+    featreg_merge, ('splitnode.out_files', pickfirst),
+    datasink_masks, 'mvpa'
+    )
+
+
 ###############################################################################
 #
 #     BASE_DIR, GRAPH, AND RUN
 #
 ###############################################################################
 
-meta.base_dir = '/tmp/working_dir'
+meta.base_dir = workflow_base_directory
+# meta.base_dir = \
+#    '/Users/AClab/Documents/mikbuch/Maestro_Project1/mvpa/preprocessing/'
 meta.write_graph("graph.dot")
 
 # Uncomment the last line to run workflow.
-# featreg_merge.run()
+# meta.run()

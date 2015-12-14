@@ -21,35 +21,14 @@ subject_template = 'GK'
 
 ###############################################################################
 #
-#      SUBJECTS NAMES - FUNCTION
-#
-###############################################################################
-
-import os
-
-
-def get_subject_names(base_directory, subject_template):
-    subjects_list = os.listdir(base_directory)
-
-    subjects_list = [sub for sub in subjects_list if subject_template in sub]
-
-    return subjects_list
-
-
-def get_roi_standard(base_directory):
-    roi_standard = os.listdir(base_directory)
-    roi_standard = [base_directory + '/' + roi for roi in roi_standard]
-    return roi_standard
-
-
-###############################################################################
-#
 #      CREATE MAIN WORKFLOW
 #
 ###############################################################################
 
 from nipype.pipeline import Workflow, Node
 import nipype.interfaces.utility as util
+
+from pymri.utils.paths_dirs_info import get_subject_names
 
 flirt_apply_all_subs = Workflow(name='flirt_apply_all_subs')
 
@@ -88,6 +67,8 @@ inputnode = Node(
 #     INPUTNODE - STANDARD SPACE ROIs
 #
 ###############################################################################
+
+from pymri.utils.paths_dirs_info import get_roi_standard
 
 input_roi_standard = Node(
     interface=util.IdentityInterface(
@@ -193,8 +174,8 @@ add_two_strings_node = Node(
 from nipype.interfaces.io import DataSink
 
 datasink = Node(interface=DataSink(), name='datasink')
-# datasink.inputs.base_directory = opap(base_directory)
-datasink.inputs.base_directory = opap('/tmp/sinks')
+datasink.inputs.base_directory = opap(base_directory)
+# datasink.inputs.base_directory = opap('/tmp/sinks')
 datasink.inputs.parameterization = False
 datasink.inputs.substitutions = [('', ''), ('_flirt', '')]
 
