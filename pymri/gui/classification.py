@@ -112,11 +112,15 @@ def create_classifier():
 
 def feature_reduction(dataset, roi_path=None):
 
-    print('\n\n%s\n\n' % var_reduction_method.get())
+    if var_k_features_frame.get():
+        reduction_method = var_reduction_method.get()
+    else:
+        reduction_method = None
+
     dataset.feature_reduction(
         roi_path=roi_path,
         k_features=var_k_features.get(),
-        reduction_method=var_reduction_method.get(),
+        reduction_method=reduction_method,
         normalize=var_normalize.get(),
         nnadl=True
         )
