@@ -366,6 +366,9 @@ def load_config():
 
     var_output_dir.set(config.get('Output', 'Output directory'))
 
+    perform_choose(var_perform_type.get())
+    classifier_choose(var_classifier_type.get())
+
     print('Configuration successfully loaded!')
 
 
