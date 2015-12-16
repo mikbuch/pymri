@@ -19,7 +19,7 @@ class FNN(object):
     def create_network(self):
         if 'simple' in self.type:
 
-            print('creating fnn simple')
+            print('creating FNN simple')
 
             import pymri.model.ann.simple as simple
             self.net = simple.Network(
@@ -31,7 +31,7 @@ class FNN(object):
                 )
         else:
 
-            print('creating fnn theano')
+            print('creating FNN theano')
 
             import pymri.model.ann.theano_script as theano_script
 
@@ -56,5 +56,5 @@ class FNN(object):
                 validation_data, test_data
                 )
 
-    def get_best_accuracy(self):
+    def get_accuracy(self):
         return self.net.best_accuracy

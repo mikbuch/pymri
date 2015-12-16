@@ -9,11 +9,15 @@ import os
 # TODO: entire perform() function in subprocess to allow window to refresh
 # TODO: create separate classes for each section to keep it clear
 
-def classifier_choose(var_classifier_type):
-    if 'fnn' in var_classifier_type:
+def classifier_choose(classifier_type):
+    if 'FNN' in classifier_type:
         fANN_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
     else:
         fANN_frame.grid_forget()
+    if 'SVC' in classifier_type:
+        SVC_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
+    else:
+        SVC_frame.grid_forget()
 
 
 def perform_choose(var_perform_type):
@@ -70,15 +74,15 @@ def create_classifier():
     For some classifiers testing phase is joined with training for convinence.
     '''
 
-    if 'fnn' in var_classifier_type.get():
+    if 'FNN' in var_classifier_type.get():
 
         from pymri.model import FNN
 
         if 'simple' in var_classifier_type.get():
-            type = 'fnn simple'
+            type = 'FNN simple'
 
         if 'theano' in var_classifier_type.get():
-            type = 'fnn theano'
+            type = 'FNN theano'
 
         # all parameters - for net architecture as well as for its training
         # has to be specified here (for reason see Classifier class)
@@ -91,6 +95,18 @@ def create_classifier():
             minibatch_size=fANN_ms.get(),
             learning_rate=fANN_eta.get()
             )
+
+    elif 'SVC' in var_classifier_type.get():
+
+        from pymri.model import SVC
+
+        cls = SVC(
+            C=SVC_C.get(),
+            kernel=SVC_kernel.get(),
+            gamma=SVC_gamma.get(),
+            degree=SVC_degree.get()
+            )
+
     return cls
 
 
@@ -125,7 +141,7 @@ def train_and_test_classifier(cls, training_data, test_data):
     return cls
 
 
-def get_best_accuracy(cls):
+def get_accuracy(cls):
     return cls.get_best_accuracy()
 
 
@@ -172,7 +188,7 @@ def perform_classification():
             )
     else:
         subjects_list = subjects_names.get().split(' ')
-        subs_num = len(subjects_list)
+    subs_num = len(subjects_list)
 
     # get list of hands (can be only one hand) or get the pattern
     if len(hands_names.get().split(' ')[0]) == 0:
@@ -231,25 +247,31 @@ def perform_classification():
                     cls = train_and_test_classifier(
                         cls, training_data, test_data
                         )
-                    best_accuracy = get_best_accuracy(cls)
+                    accuracy = get_accuracy(cls)
                     del cls
 
-                    results[sub][hand][roi][n_time] = \
-                        best_accuracy / float(len(test_data))
+                    results[sub][hand][roi][n_time] = accuracy
 
-        import pdb
-        pdb.set_trace()
+        # delimiter = ','
+        # np.savetxt(
+            # os.path.join(
+                # var_output_dir.get() +
+                # subjects_list[sub] + '_' + hands_list[hand] + '.txt'
+                # ),
+            # results[sub][hand][...][...].T,
+            # delimiter=delimiter,
+            # header=delimiter.join(rois_header)
+            # )
 
-        delimiter = ','
-        np.savetxt(
-            os.path.join(
-                var_output_dir.get() +
-                subjects_list[sub] + '_' + hands_list[hand] + '.txt'
-                ),
-            results[sub][hand][...][...].T,
-            delimiter=delimiter,
-            header=delimiter.join(rois_header)
+    np.save(
+        os.path.join(
+            var_output_dir.get(),
+            '201512161630_allsubs_bh'
             )
+        )
+
+    import pdb
+    pdb.set_trace()
 
     return results
 
@@ -276,10 +298,14 @@ def save_config():
     config.set('Classifier', 'Type', var_classifier_type.get())
     config.set('Classifier', 'k features', var_k_features.get())
     config.set('Classifier', 'Class number', var_classes_number.get())
-    config.set('Classifier', 'fnn epochs', fANN_epochs.get())
-    config.set('Classifier', 'fnn hidden neurons', fANN_hn.get())
-    config.set('Classifier', 'fnn minibatch size', fANN_ms.get())
-    config.set('Classifier', 'fnn learning rate', fANN_eta.get())
+    config.set('Classifier', 'FNN epochs', fANN_epochs.get())
+    config.set('Classifier', 'FNN hidden neurons', fANN_hn.get())
+    config.set('Classifier', 'FNN minibatch size', fANN_ms.get())
+    config.set('Classifier', 'FNN learning rate', fANN_eta.get())
+    config.set('Classifier', 'SVC C', SVC_C.get())
+    config.set('Classifier', 'SVC kernel', SVC_kernel.get())
+    config.set('Classifier', 'SVC degree', SVC_degree.get())
+    config.set('Classifier', 'SVC gamma', SVC_gamma.get())
 
     config.add_section('Performance')
     config.set('Performance', 'Metrics method', var_perform_type.get())
@@ -318,10 +344,14 @@ def load_config():
     var_classifier_type.set(config.get('Classifier', 'Type'))
     var_k_features.set(config.get('Classifier', 'k features'))
     var_classes_number.set(config.get('Classifier', 'Class number'))
-    fANN_epochs.set(config.get('Classifier', 'fnn epochs'))
-    fANN_hn.set(config.get('Classifier', 'fnn hidden neurons'))
-    fANN_ms.set(config.get('Classifier', 'fnn minibatch size'))
-    fANN_eta.set(config.get('Classifier', 'fnn learning rate'))
+    fANN_epochs.set(config.get('Classifier', 'FNN epochs'))
+    fANN_hn.set(config.get('Classifier', 'FNN hidden neurons'))
+    fANN_ms.set(config.get('Classifier', 'FNN minibatch size'))
+    fANN_eta.set(config.get('Classifier', 'FNN learning rate'))
+    SVC_C.set(config.get('Classifier', 'SVC C'))
+    SVC_kernel.set(config.get('Classifier', 'SVC kernel'))
+    SVC_degree.set(config.get('Classifier', 'SVC degree'))
+    SVC_gamma.set(config.get('Classifier', 'SVC gamma'))
 
     var_perform_type.set(config.get('Performance', 'Metrics method'))
     LPO_p.set(config.get('Performance', 'LeavePOut'))
@@ -725,13 +755,13 @@ note.grid(
 # Fill frame ##############################################################
 var_classifier_type = tk.StringVar()
 var_classifier_type.set(
-    "Feedforward Neural Network - simple python script (fnn simple)"
+    "Feedforward Neural Network - simple python script (FNN simple)"
     )
 
 classifier_option = tk.OptionMenu(
     classifier_frame, var_classifier_type,
-    "Feedforward Neural Network - simple python script (fnn simple)",
-    "Feedforward Neural Network - theano version (fnn theano)",
+    "Feedforward Neural Network - simple python script (FNN simple)",
+    "Feedforward Neural Network - theano version (FNN theano)",
     "Convolutional Neural Network (CNN)",
     "Supported Vector Classifier (SVC)",
     "Linear Discriminant Analysis (LDA)",
@@ -793,7 +823,60 @@ fANN_ms_entry = tk.Entry(
     )
 fANN_ms_entry.grid(row=0, column=7, pady=2)
 
-# ### Cross validate
+
+# SVC parameters ###
+SVC_frame = tk.Frame(classifier_frame)
+
+# C
+SVC_C = tk.DoubleVar()
+SVC_C.set(1.0)
+SVC_C_label = tk.Label(
+    SVC_frame, text="C:", font=font_standard
+    )
+SVC_C_label.grid(row=0, column=0, padx=5, pady=2)
+SVC_C_entry = tk.Entry(
+    SVC_frame, width=5, font=font_standard, textvariable=SVC_C
+    )
+SVC_C_entry.grid(row=0, column=1, pady=2)
+
+# kernel
+SVC_kernel = tk.StringVar()
+SVC_kernel.set('linear')
+SVC_kernel_label = tk.Label(
+    SVC_frame, text="kernel:", font=font_standard
+    )
+SVC_kernel_label.grid(row=0, column=2, padx=5, pady=2)
+SVC_kernel_entry = tk.Entry(
+    SVC_frame, width=5, font=font_standard, textvariable=SVC_kernel
+    )
+SVC_kernel_entry.grid(row=0, column=3, pady=2)
+
+# degree
+SVC_degree = tk.IntVar()
+SVC_degree.set(3)
+SVC_degree_label = tk.Label(
+    SVC_frame, text="degree:", font=font_standard
+    )
+SVC_degree_label.grid(row=0, column=4, padx=5, pady=2)
+SVC_degree_entry = tk.Entry(
+    SVC_frame, width=5, font=font_standard, textvariable=SVC_degree
+    )
+SVC_degree_entry.grid(row=0, column=5, pady=2)
+
+# gamma
+SVC_gamma = tk.StringVar()
+SVC_gamma.set('auto')
+SVC_gamma_label = tk.Label(
+    SVC_frame, text="gamma:", font=font_standard
+    )
+SVC_gamma_label.grid(row=0, column=6, padx=5, pady=2)
+SVC_gamma_entry = tk.Entry(
+    SVC_frame, width=5, font=font_standard, textvariable=SVC_gamma
+    )
+SVC_gamma_entry.grid(row=0, column=7, pady=2)
+
+
+# ### Cross validate ##########################################################
 perform_frame = tk.LabelFrame(
     classifier_frame, text='Performance metrics', font=font_standard
     )
@@ -803,8 +886,11 @@ perform_frame.grid(
     )
 
 perform_options = [
-    'LeavePOut (LPO randomly)', 'Shuffle Split',
-    'KFold', 'Train Test Split'
+    'LeavePOut (LPO randomly)',
+    'LeaveOneRunOut (LORO)',
+    'Shuffle Split',
+    'KFold',
+    'Train Test Split'
     ]
 
 var_perform_type = tk.StringVar()
@@ -817,6 +903,7 @@ perform_options_menu = tk.OptionMenu(
     )
 perform_options_menu.grid(row=1, column=0, stick='W', padx='20')
 perform_options_menu.configure(font=font_standard)
+
 
 # LPO parameters ###
 LPO_frame = tk.Frame(perform_frame)

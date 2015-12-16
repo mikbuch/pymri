@@ -1,5 +1,6 @@
 """
-name: get_attributes.py
+name: ev_condtitions.py
+type: module
 
 Plan:
 1. Get all conditions for all runs to one pyhon list.
@@ -11,16 +12,27 @@ Plan:
 
 Note: the way the volumens files are written allows easy masking nifti driven
 arrays.
+
+
+Notes:
+If the files has been prepared manually. Sometimes there are human errors.
+The following precautions has been taken to prevent compiler errors:
+    * Problem: in files sometimes there are blank lines at the end.
+      Solution: check if there is anything in the line before processing it.
+    * Problem: sometimes there are other files than EVs in EV directory.
+      Solution: template for EV files (default *.txt) - template system is
+      provided by the author and is simple and crude but efficient.
+
 """
 
 import glob
 import os.path
 
-
 def get_attributes(
         input_dir,
         tr,
         output_dir='./',
+        template='_Run_',
         format='mac',
         quiet=True
         ):
@@ -42,13 +54,16 @@ def get_attributes(
         Directory where attributes*.txt files will be created. Default is
         current directory.
 
-    format : string
+    template : string, optional
+        EV file template (if case there are some other files in EV directory.
+
+    format : string, optional
         mac, lin or win
         Necessary for determining linebreak character.
 
-    Returns
-    -------
-    out : out
+    quiet: bool, optional
+        Wheter print informations (feedback) during processing or not.
+
 
     Examples
     --------
@@ -62,6 +77,9 @@ def get_attributes(
     # use glob.glob in order to ignore all hidden files
     # source: http://stackoverflow.com/a/7099342
     paths = glob.glob(os.path.join(input_dir, '*'))
+
+    # take only files that match template
+    paths = [path for path in paths if template.replace('*', '') in path]
 
     # if user forgot to specify dir
     if output_dir[-1] != '/':
@@ -80,11 +98,16 @@ def get_attributes(
             for row in reader:
                 # some lines at the end may be blank
                 if row:
-                    # extract run number and condition name from filename
-                    run_index = ev_filename.find('_Run_') + len('_Run_')
-                    run = int(ev_filename[run_index])
-                    cond = ev_filename[run_index+6:-4]
-                    evs.append([float(row[0]), run, cond, ev_filename])
+                    if len(row[0]) > 0:
+                        # extract run number and condition name from filename
+                        run_index = ev_filename.find('_Run_') + len('_Run_')
+                        run = int(ev_filename[run_index])
+                        # TODO: create better function for finding condition
+                        if ev_filename[run_index+6].isalpha():
+                            cond = ev_filename[run_index+6:-4]
+                        else:
+                            cond = ev_filename[run_index+7:-4]
+                        evs.append([float(row[0]), run, cond, ev_filename])
 
     # sort list basing on 1st ([1]) index
     # 3. Sort by run, then by volumens or seconds.
@@ -167,6 +190,3 @@ def get_attributes(
             csv_writer.writerows(run)
     if not quiet:
         print('Successfully generated file: %s' % attributes_output)
-
-    # # return for debugging
-    # return attributes, volumen_condition

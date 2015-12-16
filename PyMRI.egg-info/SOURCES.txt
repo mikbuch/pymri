@@ -20,6 +20,7 @@ pymri/gui/classification.py
 pymri/gui/ev_attributes.py
 pymri/gui/main_menu.py
 pymri/model/FNN.py
+pymri/model/SVC.py
 pymri/model/__init__.py
 pymri/model/visualisation.py
 pymri/model/ann/__init__.py
@@ -27,6 +28,7 @@ pymri/model/ann/simple.py
 pymri/model/ann/theano_script.py
 pymri/utils/__init__.py
 pymri/utils/attributes.py
+pymri/utils/count_nonzero.py
 pymri/utils/h5py_data.py
 pymri/utils/masking.py
 pymri/utils/merge_nifti.py

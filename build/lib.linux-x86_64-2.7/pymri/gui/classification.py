@@ -3,16 +3,21 @@ import tkFont
 import tkFileDialog
 
 import ttk
+import os
 
 
 # TODO: entire perform() function in subprocess to allow window to refresh
 # TODO: create separate classes for each section to keep it clear
 
-def classifier_choose(var_classifier_type):
-    if 'fnn' in var_classifier_type:
+def classifier_choose(classifier_type):
+    if 'FNN' in classifier_type:
         fANN_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
     else:
         fANN_frame.grid_forget()
+    if 'SVC' in classifier_type:
+        SVC_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
+    else:
+        SVC_frame.grid_forget()
 
 
 def perform_choose(var_perform_type):
@@ -26,14 +31,14 @@ def help_display(number):
     print number
 
 
-def askfile(var):
+def askfile(var_file):
     file_chosen = tkFileDialog.askopenfilename()
-    var.set(file_chosen)
+    var_file.set(file_chosen)
 
 
-def askdir_output():
+def askdir(var_dir):
     dir_chosen = tkFileDialog.askdirectory()
-    var_output.set(dir_chosen)
+    var_dir.set(dir_chosen)
 
 
 def check_frame(frame, variable, check, text, row=0, column=1, columnspan=10):
@@ -48,118 +53,13 @@ def check_frame(frame, variable, check, text, row=0, column=1, columnspan=10):
         check['text'] = text
 
 
-def perform():
-    # TODO: it is better to create a list of commands
-    # because program can go through all code in search for errors
-
-    # Load data ###
-
-    from pymri.dataset.datasets import DatasetManager
-    # dataset settings
-
-    # in case we use fann as classifier we have to reshape data
-    if 'fANN' in var_classifier_type.get():
-        nnadl = True
-    else:
-        nnadl = False
-
-    ds = DatasetManager(
-        # path_input='/home/jesmasta/amu/master/nifti/bold/',
-        path_bold=var_bold.get(),
-        path_attr=var_attr.get(),
-        path_attr_lit=var_attr_lit.get(),
-        path_mask_brain=var_mask_brain.get(),
-        path_output=var_output.get(),
-        # conditions has to be tuples
-        contrast=(
-            tuple(var_class_00.get().split(' ')),
-            tuple(var_class_01.get().split(' '))
-            ),
-        nnadl = nnadl
-        )
-    # load data
-    ds.load_data()
-
-    # TODO: more universal function needed
-
-    if 'SKB' in var_feature_method.get():
-        feature_arguments = None
-    elif 'ROI' in var_feature_method.get():
-        # print var_mask_roi.get()
-        feature_arguments = var_mask_roi.get()
-        # print(feature_arguments)
-
-    # select feature reduction method
-    ds.feature_reduction(
-        roi_selection=var_feature_method.get(),
-        k_features=var_k_features.get(),
-        normalize = var_normalize.get(),
-        feature_arguments=feature_arguments
-        )
-
-    ###########################################################################
-    #
-    #        CREATE MODEL
-    #
-    ###########################################################################
-
-    print(var_perform_type.get())
-    if 'LPO' in var_perform_type.get():
-        import numpy as np
-        accuracies = np.zeros(shape=(LPO_n_times.get(),))
-        for i in range(LPO_n_times.get()):
-            # get training, validation and test datasets for specified roi
-            # training_data, validation_data, test_data = ds.split_data()
-            training_data, test_data, valid_data = ds.split_data(
-                sizes=(1-LPO_p.get(), LPO_p.get())
-                )
-            if 'fANN' in var_classifier_type.get():
-                # artificial neural network
-                from pymri.model import fnn
-
-                net = fnn.Network([ds.k_features, fANN_hn.get(), 2])
-                # train and test network
-                net.SGD(
-                    training_data, fANN_epochs.get(),
-                    fANN_ms.get(), fANN_eta.get(), test_data=test_data
-                    )
-
-                # record the best result
-                accuracies[i] = net.best_score/float(len(test_data))
-
-            if 'theano fnn' in var_classifier_type.get():
-                print('--- THEANO FNN ---')
-                
-
-                import pymri.model.network3 as network3
-                from pymri.model.network3 import Network
-
-                training_data, validation_data, test_data = \
-                    network3.load_data_shared()
-                mini_batch_size = 10
-                net = Network([
-                    network3.FullyConnectedLayer(n_in=784, n_out=100),
-                    network3.SoftmaxLayer(n_in=100, n_out=2)], mini_batch_size)
-                net.SGD(training_data, 300, mini_batch_size, 0.1, 
-                        validation_data, test_data)
-                accuracies[i] = net.best_validation_accuracy
-
-    mean_accuracy = accuracies.mean()
-    print('\n\nmean accuracy: %f' % mean_accuracy)
-
-    ###########################################################################
-    #
-    #   VISUALIZE
-    #
-    ###########################################################################
-
 def load_data(mvpa_directory):
 
     from pymri.dataset.datasets import DatasetManager
 
     print('Loading database from %s' % mvpa_directory)
     dataset = DatasetManager(
-        mvpa_directory = mvpa_directory,
+        mvpa_directory=mvpa_directory,
         # conditions has to be tuples
         contrast=(
             tuple(var_class_00.get().split(' ')),
@@ -168,20 +68,21 @@ def load_data(mvpa_directory):
         )
     return dataset
 
+
 def create_classifier():
     '''
     For some classifiers testing phase is joined with training for convinence.
     '''
 
-    if 'fnn' in var_classifier_type.get():
+    if 'FNN' in var_classifier_type.get():
 
         from pymri.model import FNN
 
         if 'simple' in var_classifier_type.get():
-            type = 'fnn simple'
+            type = 'FNN simple'
 
         if 'theano' in var_classifier_type.get():
-            type = 'fnn theano'
+            type = 'FNN theano'
 
         # all parameters - for net architecture as well as for its training
         # has to be specified here (for reason see Classifier class)
@@ -194,6 +95,18 @@ def create_classifier():
             minibatch_size=fANN_ms.get(),
             learning_rate=fANN_eta.get()
             )
+
+    elif 'SVC' in var_classifier_type.get():
+
+        from pymri.model import SVC
+
+        cls = SVC(
+            C=SVC_C.get(),
+            kernel=SVC_kernel.get(),
+            gamma=SVC_gamma.get(),
+            degree=SVC_degree.get()
+            )
+
     return cls
 
 
@@ -204,11 +117,12 @@ def feature_reduction(dataset, roi_path=None):
         roi_path=roi_path,
         k_features=var_k_features.get(),
         reduction_method=var_reduction_method.get(),
-        normalize = var_normalize.get(),
+        normalize=var_normalize.get(),
         nnadl=True
         )
 
     return dataset
+
 
 def split_data(dataset):
 
@@ -226,8 +140,10 @@ def train_and_test_classifier(cls, training_data, test_data):
 
     return cls
 
-def get_best_accuracy(cls):
+
+def get_accuracy(cls):
     return cls.get_best_accuracy()
+
 
 def visualise_results(results):
 
@@ -236,11 +152,11 @@ def visualise_results(results):
 
     mean_accuracies = np.zeros(shape=(LPO_n_times.get(),))
     for i in range(LPO_n_times.get()):
-        mean_accuracies[i] = accuracies[:i+1].mean()
+        mean_accuracies[i] = results[:i+1].mean()
 
     # plot best accuracy for particular validation
     plt.scatter(
-        range(len(accuracies)), accuracies,
+        range(len(results)), results,
         marker='o', s=120, c='r', label='accuracy'
         )
     # to show wether overall average changes with number of validations
@@ -251,6 +167,7 @@ def visualise_results(results):
     plt.legend(loc=3)
     plt.show()
 
+
 def perform_classification():
 
     import numpy as np
@@ -260,13 +177,18 @@ def perform_classification():
     # rois_num = 2
     # n_times_num = 100
 
-
-    # get list of subjects (can be one subject specifiedz or get the pattern
-    if '%' in subjects_names.get() and len(subjects.get().split(' ')) == 1:
+    # get list of subjects (subjects list specified or get from the pattern)
+    if '*' in subjects_names.get() and \
+            len(subjects_names.get().split(' ')) == 1:
         subjects_pattern = subjects_names.get()
+
+        from pymri.utils.paths_dirs_info import get_subject_names
+        subjects_list = get_subject_names(
+            var_base_dir.get(), subjects_pattern.replace('*', '')
+            )
     else:
-        subjects_lists = subjects_names.get().split(' ')
-        subs_num = len(subjects_lists)
+        subjects_list = subjects_names.get().split(' ')
+        subs_num = len(subjects_list)
 
     # get list of hands (can be only one hand) or get the pattern
     if len(hands_names.get().split(' ')[0]) == 0:
@@ -274,14 +196,12 @@ def perform_classification():
     else:
         hands_list = hands_names.get().split(' ')
     hands_num = len(hands_list)
-    
 
     # get list of rois
     rois_list = rois_names.get().split(' ')
     rois_num = len(rois_list)
 
     n_times_num = LPO_n_times.get()
-    
 
     # get the information required from Load_data and Classifier/Performance
     # subs_num = subs_num.get()
@@ -298,16 +218,22 @@ def perform_classification():
 
         for hand in range(hands_num):
 
-            mvpa_directory = \
-                schema.get() % (subjects_lists[sub], hands_list[hand])
+            mvpa_directory = os.path.join(
+                var_base_dir.get() +
+                schema.get() % (subjects_list[sub], hands_list[hand])
+                )
 
             print(mvpa_directory)
-            # load dataset using variables from load_data frame (load_data tab))
+            # load dataset using variables from load_data frame (load_data tab)
             dataset = load_data(mvpa_directory)
 
+            rois_header = []
             for roi in range(rois_num):
                 # get the data from specified import ROIs
-                roi_path = mvpa_directory + 'ROIs/' + rois_list[roi] + '.nii.gz'
+                roi_path = os.path.join(
+                    mvpa_directory + 'ROIs/' + rois_list[roi] + '.nii.gz'
+                    )
+                rois_header.append(rois_list[roi])
                 dataset_reduced = feature_reduction(dataset, roi_path)
 
                 for n_time in range(n_times_num):
@@ -321,20 +247,39 @@ def perform_classification():
                     cls = train_and_test_classifier(
                         cls, training_data, test_data
                         )
-                    best_accuracy = get_best_accuracy(cls)
+                    accuracy = get_accuracy(cls)
                     del cls
 
+                    results[sub][hand][roi][n_time] = accuracy
 
-                    results[sub][hand][roi][n_time] = \
-                        best_accuracy / float(len(test_data))
+        # delimiter = ','
+        # np.savetxt(
+            # os.path.join(
+                # var_output_dir.get() +
+                # subjects_list[sub] + '_' + hands_list[hand] + '.txt'
+                # ),
+            # results[sub][hand][...][...].T,
+            # delimiter=delimiter,
+            # header=delimiter.join(rois_header)
+            # )
+
+    np.save(
+        os.path.join(
+            var_output_dir.get(),
+            '201512161630_allsubs_bh'
+            )
+        )
 
     import pdb
     pdb.set_trace()
+
     return results
+
 
 def go():
     # dataset = load_data()
     perform_classification()
+
 
 def save_config():
     import ConfigParser
@@ -342,6 +287,7 @@ def save_config():
     config = ConfigParser.RawConfigParser()
 
     config.add_section('Load data')
+    config.set('Load data', 'Base directory', var_base_dir.get())
     config.set('Load data', 'Subjects', subjects_names.get())
     config.set('Load data', 'Hands', hands_names.get())
     config.set('Load data', 'Files schema', schema.get())
@@ -352,10 +298,14 @@ def save_config():
     config.set('Classifier', 'Type', var_classifier_type.get())
     config.set('Classifier', 'k features', var_k_features.get())
     config.set('Classifier', 'Class number', var_classes_number.get())
-    config.set('Classifier', 'fnn epochs', fANN_epochs.get())
-    config.set('Classifier', 'fnn hidden neurons', fANN_hn.get())
-    config.set('Classifier', 'fnn minibatch size', fANN_ms.get())
-    config.set('Classifier', 'fnn learning rate', fANN_eta.get())
+    config.set('Classifier', 'FNN epochs', fANN_epochs.get())
+    config.set('Classifier', 'FNN hidden neurons', fANN_hn.get())
+    config.set('Classifier', 'FNN minibatch size', fANN_ms.get())
+    config.set('Classifier', 'FNN learning rate', fANN_eta.get())
+    config.set('Classifier', 'SVC C', SVC_C.get())
+    config.set('Classifier', 'SVC kernel', SVC_kernel.get())
+    config.set('Classifier', 'SVC degree', SVC_degree.get())
+    config.set('Classifier', 'SVC gamma', SVC_gamma.get())
 
     config.add_section('Performance')
     config.set('Performance', 'Metrics method', var_perform_type.get())
@@ -370,16 +320,21 @@ def save_config():
     config.set('Feature reduction', 'method', var_reduction_method.get())
     config.set('Feature reduction', 'Normalize', var_normalize.get())
 
+    config.add_section('Output')
+    config.set('Output', 'Output directory', var_output_dir.get())
+
     with open('pymri.cfg', 'wb') as configfile:
         config.write(configfile)
 
     print('Configuration successfully saved!')
+
 
 def load_config():
     import ConfigParser
 
     config = ConfigParser.RawConfigParser()
     config.read('pymri.cfg')
+    var_base_dir.set(config.get('Load data', 'Base directory'))
     subjects_names.set(config.get('Load data', 'Subjects'))
     hands_names.set(config.get('Load data', 'Hands'))
     schema.set(config.get('Load data', 'Files schema'))
@@ -389,10 +344,14 @@ def load_config():
     var_classifier_type.set(config.get('Classifier', 'Type'))
     var_k_features.set(config.get('Classifier', 'k features'))
     var_classes_number.set(config.get('Classifier', 'Class number'))
-    fANN_epochs.set(config.get('Classifier', 'fnn epochs'))
-    fANN_hn.set(config.get('Classifier', 'fnn hidden neurons'))
-    fANN_ms.set(config.get('Classifier', 'fnn minibatch size'))
-    fANN_eta.set(config.get('Classifier', 'fnn learning rate'))
+    fANN_epochs.set(config.get('Classifier', 'FNN epochs'))
+    fANN_hn.set(config.get('Classifier', 'FNN hidden neurons'))
+    fANN_ms.set(config.get('Classifier', 'FNN minibatch size'))
+    fANN_eta.set(config.get('Classifier', 'FNN learning rate'))
+    SVC_C.set(config.get('Classifier', 'SVC_C'))
+    SVC_kernel.set(config.get('Classifier', 'SVC_kernel'))
+    SVC_degree.set(config.get('Classifier', 'SVC_degree'))
+    SVC_gamma.set(config.get('Classifier', 'SVC_gamma'))
 
     var_perform_type.set(config.get('Performance', 'Metrics method'))
     LPO_p.set(config.get('Performance', 'LeavePOut'))
@@ -405,6 +364,7 @@ def load_config():
     var_reduction_method.set(config.get('Feature reduction', 'method'))
     var_normalize.set(config.get('Feature reduction', 'Normalize'))
 
+    var_output_dir.set(config.get('Output', 'Output directory'))
 
     print('Configuration successfully loaded!')
 
@@ -470,6 +430,22 @@ note.grid(
 
 # Number of subjects and hands to test the classifier on ######################
 
+# Base directory (Project main directory) ###
+var_base_dir = tk.StringVar()
+
+base_dir_lbl = tk.Label(
+    load_data_frame, text="Base directory:", font=font_standard
+    )
+base_dir_lbl.grid(
+    row=0, column=0, columnspan=2, sticky='E', padx=5, pady=5
+    )
+
+base_dir_txt = tk.Entry(
+    load_data_frame, width=40, font=font_standard, textvariable=var_base_dir
+    )
+base_dir_txt.grid(row=0, column=2, columnspan=10, sticky="WE", pady=5)
+
+
 # Specify subjects (list, or schema path) ###
 
 # subjects_number variable is set in load_data() function
@@ -480,13 +456,13 @@ subjects_lbl = tk.Label(
     load_data_frame, text="Subjects:", font=font_standard
     )
 subjects_lbl.grid(
-    row=0, column=0, columnspan=2, sticky='E', padx=5, pady=5
+    row=1, column=0, columnspan=2, sticky='E', padx=5, pady=5
     )
 
 subjects_txt = tk.Entry(
     load_data_frame, width=40, font=font_standard, textvariable=subjects_names
     )
-subjects_txt.grid(row=0, column=2, columnspan=10, sticky="WE", pady=5)
+subjects_txt.grid(row=1, column=2, columnspan=10, sticky="WE", pady=5)
 
 
 # Specify hands (list them, if nothing set get both hands) ###
@@ -499,13 +475,13 @@ hands_lbl = tk.Label(
     load_data_frame, text="Hands:", font=font_standard
     )
 hands_lbl.grid(
-    row=1, column=0, columnspan=2, sticky='E', padx=5, pady=5
+    row=2, column=0, columnspan=2, sticky='E', padx=5, pady=5
     )
 
 hands_txt = tk.Entry(
     load_data_frame, width=40, font=font_standard, textvariable=hands_names
     )
-hands_txt.grid(row=1, column=2, columnspan=10, sticky="WE", pady=5)
+hands_txt.grid(row=2, column=2, columnspan=10, sticky="WE", pady=5)
 
 
 # Files schema ###
@@ -516,16 +492,16 @@ schema_lbl = tk.Label(
     load_data_frame, text="Files schema:", font=font_standard
     )
 schema_lbl.grid(
-    row=2, column=0, columnspan=2, sticky='E', padx=5, pady=5
+    row=3, column=0, columnspan=2, sticky='E', padx=5, pady=5
     )
 
 schema_txt = tk.Entry(
     load_data_frame, width=40, font=font_standard, textvariable=schema
     )
-schema_txt.grid(row=2, column=2, columnspan=10, sticky="WE", pady=5)
+schema_txt.grid(row=3, column=2, columnspan=10, sticky="WE", pady=5)
 
 sep_paths_classes = ttk.Separator(load_data_frame, orient=tk.HORIZONTAL)
-sep_paths_classes.grid(row=3, column=1, columnspan=9, sticky='EW', pady=10)
+sep_paths_classes.grid(row=4, column=1, columnspan=9, sticky='EW', pady=10)
 
 
 # classes (contrasts) get ###
@@ -536,13 +512,13 @@ constrast_00_lbl = tk.Label(
     load_data_frame, text="Class 00:", font=font_standard
     )
 constrast_00_lbl.grid(
-    row=4, column=0, columnspan=2, sticky='E', padx=5, pady=5
+    row=5, column=0, columnspan=2, sticky='E', padx=5, pady=5
     )
 
 constast_00_txt = tk.Entry(
     load_data_frame, width=40, font=font_standard, textvariable=var_class_00
     )
-constast_00_txt.grid(row=4, column=2, columnspan=10, sticky="WE", pady=5)
+constast_00_txt.grid(row=5, column=2, columnspan=10, sticky="WE", pady=5)
 
 var_class_01 = tk.StringVar()
 
@@ -552,13 +528,13 @@ constrast_01_lbl = tk.Label(
     load_data_frame, text="Class 01:", font=font_standard
     )
 constrast_01_lbl.grid(
-    row=5, column=0, columnspan=2, sticky='E', padx=5, pady=5
+    row=6, column=0, columnspan=2, sticky='E', padx=5, pady=5
     )
 
 constast_01_txt = tk.Entry(
     load_data_frame, width=40, font=font_standard, textvariable=var_class_01
     )
-constast_01_txt.grid(row=5, column=2, columnspan=10, sticky="WE", pady=5)
+constast_01_txt.grid(row=6, column=2, columnspan=10, sticky="WE", pady=5)
 
 
 var_classes_number = tk.IntVar()
@@ -602,7 +578,7 @@ rois_check = tk.Checkbutton(
 rois_check.grid(row=0, column=0, columnspan=1, padx=10, pady=10, sticky='W')
 
 rois_frame = tk.LabelFrame(
-    feature_frame, borderwidth = font_size/6,
+    feature_frame, borderwidth=font_size/6,
     text=rois_text, font=font_standard
     )
 
@@ -623,7 +599,6 @@ rois_entry = tk.Entry(
 rois_entry.grid(row=0, column=2, columnspan=10, sticky="WE", pady=5)
 
 
-
 # Feature reduction frame ##################
 
 # Reduction method
@@ -639,10 +614,12 @@ k_features_check = tk.Checkbutton(
         ),
     variable=var_k_features_frame, font=font_standard
     )
-k_features_check.grid(row=1, column=0, columnspan=1, padx=10, pady=10, sticky='W')
+k_features_check.grid(
+    row=1, column=0, columnspan=1, padx=10, pady=10, sticky='W'
+    )
 
 k_features_frame = tk.LabelFrame(
-    feature_frame, borderwidth = font_size/6,
+    feature_frame, borderwidth=font_size/6,
     text=k_features_text, font=font_standard
     )
 
@@ -686,119 +663,79 @@ normalize_check.grid(
     row=3, column=0, columnspan=3, padx=10, pady=10, sticky='W'
     )
 
+'''
+# PCA feature extraction method ###
+PCA_frame = tk.Frame(feature_frame)
+
+PCA_whiten = tk.BooleanVar()
+PCA_chk_whiten = tk.Checkbutton(
+    PCA_frame, text="whiten", variable=PCA_whiten, font=font_standard)
+PCA_chk_whiten.grid(row=3, column=1)
 
 
+# RBM feature extraction method ###
+RBM_frame = tk.Frame(feature_frame)
 
-# # Feature Selection/Extraction method ###
-# var_feature_method = tk.StringVar()
-# var_feature_method.set("SelectKBest (SKB)")
-# feature_arguments=None
+# learning rate
+RBM_lr = tk.StringVar()
+RBM_lr.set('0.1')
+RBM_lr_label = tk.Label(
+    RBM_frame, text="Learning rate:", font=font_standard
+    )
+RBM_lr_label.grid(row=0, column=0, padx=5, pady=2)
+RBM_lr_entry = tk.Entry(
+    RBM_frame, width=5, font=font_standard, textvariable=RBM_lr
+    )
+RBM_lr_entry.grid(row=0, column=1, pady=2)
 
-# feature_option = tk.OptionMenu(
-    # feature_frame, var_feature_method,
-    # "SelectKBest (SKB)",
-    # "ROI mask",
-    # "Principal Component Analysis (PCA)",
-    # "Restricted Boltzmann Machine (RBM)",
-    # command=feature_choose
-    # )
-# feature_option.grid(row=2, stick='W', padx='20')
-# feature_option.configure(font=font_standard)
+# batch size
+RBM_bs = tk.StringVar()
+RBM_bs.set('10')
+RBM_bs_label = tk.Label(
+    RBM_frame, text="Batch size:", font=font_standard
+    )
+RBM_bs_label.grid(row=0, column=2, padx=5, pady=2)
+RBM_bs_entry = tk.Entry(
+    RBM_frame, width=5, font=font_standard, textvariable=RBM_bs
+    )
+RBM_bs_entry.grid(row=0, column=3, pady=2)
 
-# # ROI mask feature selection method ###
-# ROI_frame = tk.Frame(feature_frame)
+# n_iter
+RBM_ni = tk.StringVar()
+RBM_ni.set('10')
+RBM_ni_label = tk.Label(
+    RBM_frame, text="n_iter:", font=font_standard
+    )
+RBM_ni_label.grid(row=0, column=4, padx=5, pady=2)
+RBM_ni_entry = tk.Entry(
+    RBM_frame, width=4, font=font_standard, textvariable=RBM_ni
+    )
+RBM_ni_entry.grid(row=0, column=5, pady=2)
 
-# var_mask_roi = tk.StringVar()
+# verbose
+RBM_ver = tk.StringVar()
+RBM_ver.set('0')
+RBM_ver_label = tk.Label(
+    RBM_frame, text="verbose:", font=font_standard
+    )
+RBM_ver_label.grid(row=1, column=0, sticky='E', padx=5, pady=2)
+RBM_ver_entry = tk.Entry(
+    RBM_frame, width=5, font=font_standard, textvariable=RBM_ver
+    )
+RBM_ver_entry.grid(row=1, column=1, pady=2)
 
-# ROI_label = tk.Label(
-    # ROI_frame, text="Mask file:", font=font_standard
-    # )
-# ROI_label.grid(row=0, column=0, sticky='E', padx=5, pady=5)
-
-# ROI_entry = tk.Entry(
-    # ROI_frame, width=40, font=font_standard, textvariable=var_mask_roi
-    # )
-# ROI_entry.grid(row=0, column=1, columnspan=8, sticky="W", padx=5, pady=5)
-
-# ROI_button = tk.Button(
-    # ROI_frame,
-    # command=lambda: askfile(var_mask_roi),
-    # text="Browse ...", font=font_standard
-    # )
-# ROI_button.grid(row=0, column=10, sticky='W', padx=5, pady=5)
-
-# # PCA feature extraction method ###
-# PCA_frame = tk.Frame(feature_frame)
-
-# PCA_whiten = tk.BooleanVar()
-# PCA_chk_whiten = tk.Checkbutton(
-    # PCA_frame, text="whiten", variable=PCA_whiten, font=font_standard)
-# PCA_chk_whiten.grid(row=3, column=1)
-
-
-# # RBM feature extraction method ###
-# RBM_frame = tk.Frame(feature_frame)
-
-# # learning rate
-# RBM_lr = tk.StringVar()
-# RBM_lr.set('0.1')
-# RBM_lr_label = tk.Label(
-    # RBM_frame, text="Learning rate:", font=font_standard
-    # )
-# RBM_lr_label.grid(row=0, column=0, padx=5, pady=2)
-# RBM_lr_entry = tk.Entry(
-    # RBM_frame, width=5, font=font_standard, textvariable=RBM_lr
-    # )
-# RBM_lr_entry.grid(row=0, column=1, pady=2)
-
-# # batch size
-# RBM_bs = tk.StringVar()
-# RBM_bs.set('10')
-# RBM_bs_label = tk.Label(
-    # RBM_frame, text="Batch size:", font=font_standard
-    # )
-# RBM_bs_label.grid(row=0, column=2, padx=5, pady=2)
-# RBM_bs_entry = tk.Entry(
-    # RBM_frame, width=5, font=font_standard, textvariable=RBM_bs
-    # )
-# RBM_bs_entry.grid(row=0, column=3, pady=2)
-
-# # n_iter
-# RBM_ni = tk.StringVar()
-# RBM_ni.set('10')
-# RBM_ni_label = tk.Label(
-    # RBM_frame, text="n_iter:", font=font_standard
-    # )
-# RBM_ni_label.grid(row=0, column=4, padx=5, pady=2)
-# RBM_ni_entry = tk.Entry(
-    # RBM_frame, width=4, font=font_standard, textvariable=RBM_ni
-    # )
-# RBM_ni_entry.grid(row=0, column=5, pady=2)
-
-# # verbose
-# RBM_ver = tk.StringVar()
-# RBM_ver.set('0')
-# RBM_ver_label = tk.Label(
-    # RBM_frame, text="verbose:", font=font_standard
-    # )
-# RBM_ver_label.grid(row=1, column=0, sticky='E', padx=5, pady=2)
-# RBM_ver_entry = tk.Entry(
-    # RBM_frame, width=5, font=font_standard, textvariable=RBM_ver
-    # )
-# RBM_ver_entry.grid(row=1, column=1, pady=2)
-
-# # random state
-# RBM_rs = tk.StringVar()
-# RBM_rs.set('None')
-# RBM_rs_label = tk.Label(
-    # RBM_frame, text="n_iter:", font=font_standard
-    # )
-# RBM_rs_label.grid(row=1, column=2, padx=5, pady=2)
-# RBM_rs_entry = tk.Entry(
-    # RBM_frame, width=5, font=font_standard, textvariable=RBM_rs
-    # )
-# RBM_rs_entry.grid(row=1, column=3, pady=2)
-
+# random state
+RBM_rs = tk.StringVar()
+RBM_rs.set('None')
+RBM_rs_label = tk.Label(
+    RBM_frame, text="n_iter:", font=font_standard
+    )
+RBM_rs_label.grid(row=1, column=2, padx=5, pady=2)
+RBM_rs_entry = tk.Entry(
+    RBM_frame, width=5, font=font_standard, textvariable=RBM_rs
+    )
+RBM_rs_entry.grid(row=1, column=3, pady=2)
+'''
 
 ###########################################################################
 #
@@ -817,12 +754,14 @@ note.grid(
 
 # Fill frame ##############################################################
 var_classifier_type = tk.StringVar()
-var_classifier_type.set("Feedforward Neural Network - simple python script (fnn simple)")
+var_classifier_type.set(
+    "Feedforward Neural Network - simple python script (FNN simple)"
+    )
 
 classifier_option = tk.OptionMenu(
     classifier_frame, var_classifier_type,
-    "Feedforward Neural Network - simple python script (fnn simple)",
-    "Feedforward Neural Network - theano version (fnn theano)",
+    "Feedforward Neural Network - simple python script (FNN simple)",
+    "Feedforward Neural Network - theano version (FNN theano)",
     "Convolutional Neural Network (CNN)",
     "Supported Vector Classifier (SVC)",
     "Linear Discriminant Analysis (LDA)",
@@ -909,6 +848,59 @@ perform_options_menu = tk.OptionMenu(
 perform_options_menu.grid(row=1, column=0, stick='W', padx='20')
 perform_options_menu.configure(font=font_standard)
 
+
+# SVC parameters ###
+SVC_frame = tk.Frame(classifier_frame)
+
+# C
+SVC_C = tk.DoubleVar()
+SVC_C.set(1.0)
+SVC_C_label = tk.Label(
+    SVC_frame, text="C:", font=font_standard
+    )
+SVC_C_label.grid(row=0, column=0, padx=5, pady=2)
+SVC_C_entry = tk.Entry(
+    SVC_frame, width=5, font=font_standard, textvariable=SVC_C
+    )
+SVC_C_entry.grid(row=0, column=1, pady=2)
+
+# kernel
+SVC_kernel = tk.StringVar()
+SVC_kernel.set('linear')
+SVC_kernel_label = tk.Label(
+    SVC_frame, text="kernel:", font=font_standard
+    )
+SVC_kernel_label.grid(row=0, column=2, padx=5, pady=2)
+SVC_kernel_entry = tk.Entry(
+    SVC_frame, width=5, font=font_standard, textvariable=SVC_kernel
+    )
+SVC_kernel_entry.grid(row=0, column=3, pady=2)
+
+# degree
+SVC_degree = tk.IntVar()
+SVC_degree.set(3)
+SVC_degree_label = tk.Label(
+    SVC_frame, text="degree:", font=font_standard
+    )
+SVC_degree_label.grid(row=0, column=4, padx=5, pady=2)
+SVC_degree_entry = tk.Entry(
+    SVC_frame, width=5, font=font_standard, textvariable=SVC_degree
+    )
+SVC_degree_entry.grid(row=0, column=5, pady=2)
+
+# gamma
+SVC_gamma = tk.StringVar()
+SVC_gamma.set('auto')
+SVC_gamma_label = tk.Label(
+    SVC_frame, text="gamma:", font=font_standard
+    )
+SVC_gamma_label.grid(row=0, column=6, padx=5, pady=2)
+SVC_gamma_entry = tk.Entry(
+    SVC_frame, width=5, font=font_standard, textvariable=SVC_gamma
+    )
+SVC_gamma_entry.grid(row=0, column=7, pady=2)
+
+
 # LPO parameters ###
 LPO_frame = tk.Frame(perform_frame)
 
@@ -943,7 +935,7 @@ LPO_n_times_entry.grid(row=0, column=3, pady=2)
 #
 ###########################################################################
 
-var_output = tk.StringVar()
+var_output_dir = tk.StringVar()
 
 output_frame = tk.Frame(note)
 
@@ -954,22 +946,22 @@ note.grid(
     )
 
 # Output ###################################################################
-outFileLbl = tk.Label(
+output_lbl = tk.Label(
     output_frame, text="Output directory:", font=font_standard
     )
-outFileLbl.grid(row=0, column=0, columnspan=2, sticky='E', padx=5, pady=5)
+output_lbl.grid(row=0, column=0, columnspan=2, sticky='E', padx=5, pady=5)
 
-outFileTxt = tk.Entry(
-    output_frame, width=40, font=font_standard, textvariable=var_output
+output_entry = tk.Entry(
+    output_frame, width=40, font=font_standard, textvariable=var_output_dir
     )
-outFileTxt.grid(row=0, column=2, columnspan=8, sticky="WE", pady=5)
+output_entry.grid(row=0, column=2, columnspan=8, sticky="WE", pady=5)
 
-outFileBtn = tk.Button(
+output_button = tk.Button(
     output_frame,
-    command=askdir_output,
+    command=lambda: askdir(var_output_dir),
     text="Browse ...", font=font_standard
     )
-outFileBtn.grid(row=0, column=10, sticky='W', padx=5, pady=5)
+output_button.grid(row=0, column=10, sticky='W', padx=5, pady=5)
 
 
 ###########################################################################

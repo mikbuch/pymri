@@ -84,41 +84,39 @@ input_roi_standard.iterables = (
 
 ###############################################################################
 #
-#     DATA GRABBER NODES
+#     DATA GRABBER NODE
 #
 ###############################################################################
 
 from nipype.interfaces.io import DataGrabber
 from os.path import abspath as opap
 
-
-# ### MOLOCH ####################################
-dg_moloch = Node(DataGrabber(
+grabber = Node(DataGrabber(
     infields=['subject_id', 'hand'],
     outfields=['reference', 'matrix']),
     name='moloch'
     )
-dg_moloch.inputs.base_directory = opap(base_directory)
-dg_moloch.inputs.template = '*'
+grabber.inputs.base_directory = opap(base_directory)
+grabber.inputs.template = '*'
 reg_dir_template = '%s/Analyzed_Data/MainExp_%sHand_Run-1.feat/reg/'
-dg_moloch.inputs.field_template = dict(
+grabber.inputs.field_template = dict(
     reference=reg_dir_template + 'example_func.nii.gz',
     matrix=reg_dir_template + 'standard2example*'
     )
-dg_moloch.inputs.template_args = dict(
+grabber.inputs.template_args = dict(
     reference=[['subject_id', 'hand']],
     matrix=[['subject_id', 'hand']]
     )
-dg_moloch.inputs.sort_filelist = True
+grabber.inputs.sort_filelist = True
 
 
 flirt_apply_all_subs.connect(
     inputsub, 'sub',
-    dg_moloch, 'subject_id'
+    grabber, 'subject_id'
     )
 flirt_apply_all_subs.connect(
     inputhand, 'hand',
-    dg_moloch, 'hand'
+    grabber, 'hand'
     )
 
 ###############################################################################
@@ -143,11 +141,11 @@ flirt_apply_all_subs.connect(
 
 
 flirt_apply_all_subs.connect(
-    dg_moloch, 'reference',
+    grabber, 'reference',
     flt, 'reference'
     )
 flirt_apply_all_subs.connect(
-    dg_moloch, 'matrix',
+    grabber, 'matrix',
     flt, 'in_matrix_file'
     )
 
