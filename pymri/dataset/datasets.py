@@ -7,6 +7,7 @@ __contact__ = "mikolaj.buchwald@gmail.com"
 
 
 import numpy as np
+import os
 import nibabel
 from sklearn.datasets.base import Bunch
 # from utils import masking, signal
@@ -29,11 +30,16 @@ class DatasetManager(object):
             vectorize_target=False,
             ):
 
+        bold_path = os.path.join(mvpa_directory, bold)
+        attr_path = os.path.join(mvpa_directory, attr)
+        attr_lit_path = os.path.join(mvpa_directory, attr_lit)
+        mask_brain_path = os.path.join(mvpa_directory, mask_brain)
+
         self.contrast = contrast
-        self.bold = mvpa_directory + bold
-        self.attr = mvpa_directory + attr
-        self.attr_lit = mvpa_directory + attr_lit
-        self.mask_brain = mvpa_directory + mask_brain
+        self.bold = bold_path
+        self.attr = attr_path
+        self.attr_lit = attr_lit_path
+        self.mask_brain = mask_brain_path
         self.output = path_output
         self.k_features = None
         self.normalize = None
