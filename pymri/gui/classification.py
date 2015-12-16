@@ -12,8 +12,10 @@ import os
 def classifier_choose(classifier_type):
     if 'FNN' in classifier_type:
         fANN_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
+        var_nnadl.set(1)
     else:
         fANN_frame.grid_forget()
+        var_nnadl.set(0)
     if 'SVC' in classifier_type:
         SVC_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
     else:
@@ -122,7 +124,7 @@ def feature_reduction(dataset, roi_path=None):
         k_features=var_k_features.get(),
         reduction_method=reduction_method,
         normalize=var_normalize.get(),
-        nnadl=True
+        nnadl=var_nnadl.get()
         )
 
     return dataset
@@ -781,6 +783,9 @@ classifier_option.configure(font=font_standard)
 
 # fANN parameters ###
 fANN_frame = tk.Frame(classifier_frame)
+
+# nnadl for FNN simple
+var_nnadl = tk.IntVar()
 
 # hidden neurons
 fANN_epochs = tk.IntVar()
