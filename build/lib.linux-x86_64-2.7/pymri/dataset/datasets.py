@@ -7,6 +7,7 @@ __contact__ = "mikolaj.buchwald@gmail.com"
 
 
 import numpy as np
+import os
 import nibabel
 from sklearn.datasets.base import Bunch
 # from utils import masking, signal
@@ -29,13 +30,19 @@ class DatasetManager(object):
             vectorize_target=False,
             ):
 
+        bold_path = os.path.join(mvpa_directory, bold)
+        attr_path = os.path.join(mvpa_directory, attr)
+        attr_lit_path = os.path.join(mvpa_directory, attr_lit)
+        mask_brain_path = os.path.join(mvpa_directory, mask_brain)
+
         self.contrast = contrast
-        self.bold = mvpa_directory + bold
-        self.attr = mvpa_directory + attr
-        self.attr_lit = mvpa_directory + attr_lit
-        self.mask_brain = mvpa_directory + mask_brain
+        self.bold = bold_path
+        self.attr = attr_path
+        self.attr_lit = attr_lit_path
+        self.mask_brain = mask_brain_path
         self.output = path_output
         self.k_features = None
+        self.reduction_method = None
         self.normalize = None
         self.scale_0_1 = scale_0_1
         self.nnadl = False
@@ -48,6 +55,7 @@ class DatasetManager(object):
         self.training_data_max = None
         self.training_data_min = None
 
+        self.condition_mask = None
         self.X_raw = None
         self.X_processed = None
         self.y = None
@@ -95,6 +103,7 @@ class DatasetManager(object):
                 condition_mask += conditions == n
 
         condition_mask = np.array(condition_mask, dtype=bool)
+
         X = fmri_data[..., condition_mask]
         y = y[condition_mask]
 
@@ -119,14 +128,15 @@ class DatasetManager(object):
         print('# X shape: %s' % str(X.shape))
         print('# y shape: %s' % str(y.shape))
         print('##############################')
+        self.condition_mask = condition_mask
         self.X_raw, self.y = X, y
 
     def feature_reduction(
             self, roi_path=None, k_features=0, reduction_method=None,
-            normalize=True, nnadl=False, feature_arguments=None
+            normalize=False, nnadl=False, feature_arguments=None
             ):
         self.k_features = k_features
-        # self.reduction_method = reduction_method
+        self.reduction_method = reduction_method
         self.normalize = normalize
         self.nnadl = nnadl
 
@@ -151,14 +161,6 @@ class DatasetManager(object):
             elif 'RBM' in reduction_method:
                 X = self._RBM(X, y, feature_arguments)
 
-        # normalize if set
-        if self.normalize:
-            X = self._normalize(X)
-
-        # scale in range(0,1) if set
-        if self.scale_0_1:
-            X = self._scale_0_1(X)
-
         self.X_processed = X
 
         if self.nnadl:
@@ -171,10 +173,14 @@ class DatasetManager(object):
                 # e.g. [0, 1, 1] ==> [[1, 0], [0, 1], [0, 1]]
                 self.y = self.vectorize(self.y, n_classes)
 
-    def _normalize(self, X):
-        from sklearn import preprocessing
-        X = preprocessing.normalize(X)
-        return X
+    def _normalize(self, X, y, X_t):
+        from sklearn.preprocessing import Normalizer
+        NORM = Normalizer()
+
+        X = NORM.fit_transform(X, y)
+        X_t = NORM.transform(X_t)
+
+        return X, X_t
 
     def _scale_0_1(self, X):
         # scale data in range (0,1)
@@ -201,21 +207,23 @@ class DatasetManager(object):
 
         print('Getting k highest from mask: %s' % roi_path)
 
-        # roi_mask = masking.apply_mask(
-            # roi_path, self.mask_non_brain, k_features=self.k_features
-            # )
+        '''
+        roi_mask = masking.apply_mask(
+            roi_path, self.mask_non_brain, k_features=self.k_features
+            )
+        '''
 
         roi_mask = masking.apply_mask(roi_path, self.mask_non_brain)
 
         from pymri.utils.masking import separate_k_highest
 
         roi_mask = separate_k_highest(self.k_features, roi_mask)
-
         roi_mask = roi_mask.astype(bool)
 
         X = X[..., roi_mask]
 
-        self.feature_reduction_method = '%d %s' % (self.k_features, roi_path)
+        self.feature_reduction_method = roi_path
+
         return X
 
     def _PCA(self, X, y):
@@ -313,10 +321,48 @@ class DatasetManager(object):
             self.training_data_max = X.max()
             self.training_data_min = X.min()
 
+            if self.normalize:
+                X, X_t = self._normalize(X, y, X_t)
+
             if self.nnadl:
                 return zip(X, y), zip(X_t, y_t), None
             else:
                 return (X, y), (X_t, y_t), None
+
+
+    def leave_one_run_out(self, runs, volumes, n_time):
+
+        one_run = np.zeros(shape=(runs*volumes), dtype=bool)
+        one_run[n_time*volumes:(n_time+1)*volumes] = 1
+        rest_runs = -one_run
+
+        one_run = one_run[self.condition_mask]
+        rest_runs = rest_runs[self.condition_mask]
+
+        # X, y - training dataset
+        # X_t, y_t - test dataset
+
+        # get from the original dataset training phase consisting of
+        # 4 functional runs
+        X = self.X_processed[rest_runs]
+        y = self.y[rest_runs]
+
+        # get from the original dataset testing phase consisting of
+        # 1 functional run
+        X_t = self.X_processed[one_run]
+        y_t = self.y[one_run]
+
+        if self.normalize:
+            X, X_t = self._normalize(X, y, X_t)
+
+        self.training_data_max = X.max()
+        self.training_data_min = X.min()
+
+        if self.nnadl:
+            return zip(X, y), zip(X_t, y_t), None
+        else:
+            return (X, y), (X_t, y_t), None
+
 
     def nnadl_prep(self):
         ''' Neural networks and deep learning tutorial data preparation

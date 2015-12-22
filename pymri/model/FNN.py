@@ -21,8 +21,8 @@ class FNN(object):
 
             print('creating FNN simple')
 
-            import pymri.model.ann.simple as simple
-            self.net = simple.Network(
+            from pymri.model.ann.simple import Network
+            self.net = Network(
                 [
                     self.input_layer_size,
                     self.hidden_layer_size,
@@ -33,12 +33,15 @@ class FNN(object):
 
             print('creating FNN theano')
 
-            import pymri.model.ann.theano_script as theano_script
+            from pymri.model.ann.theano_script import Network
+            from pymri.model.ann.theano_script import FullyConnectedLayer
+            from pymri.model.ann.theano_script import SoftmaxLayer
 
-            mini_batch_size = 10
-            self.net = theano_script.Network([
-                theano_script.FullyConnectedLayer(n_in=784, n_out=100),
-                theano_script.SoftmaxLayer(n_in=100, n_out=2)], self.minibatch_size)
+            self.net = Network([
+                FullyConnectedLayer(n_in=784, n_out=self.hidden_layer_size),
+                SoftmaxLayer(n_in=self.hidden_layer_size, n_out=2)],
+                self.mini_batch_size
+                )
 
     def train_and_test(self, training_data, test_data):
 
@@ -49,11 +52,14 @@ class FNN(object):
                 test_data=test_data
                 )
         else:
-            training_data, validation_data, test_data = \
-                network3.load_data_shared()
+            from pymri.model.ann.theano_script import share_data
+            training_data, test_data = share_data(training_data, test_data)
             self.net.SGD(
-                training_data, 300, self.mini_batch_size, 0.1,
-                validation_data, test_data
+                training_data,
+                self.epochs,
+                self.mini_batch_size,
+                self.learning_rate,
+                test_data
                 )
 
     def get_accuracy(self):

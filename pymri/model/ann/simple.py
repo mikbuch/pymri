@@ -66,7 +66,7 @@ class Network(object):
             if test_data:
                 score = self.evaluate(test_data)
                 if score > self.best_accuracy:
-                    self.best_accuracy = score / len(test_data)
+                    self.best_accuracy = score / float(len(test_data))
                     self.best_biases = self.biases
                     self.best_weights = self.weights
                 print "Epoch {0}: {1} / {2}".format(

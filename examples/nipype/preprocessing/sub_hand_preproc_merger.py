@@ -34,7 +34,7 @@ Place where all files created and required by workflow will be stored.
 '''
 # workflow_base_directory = \
 #     '/Users/AClab/Documents/mikbuch/Maestro_Project1/mvpa/preprocessing'
-workflow_base_directory = '/tmp/working_dir'
+workflow_base_directory = '/home/jesmasta/amu/master/working_dir'
 
 
 subject_template = 'GK'

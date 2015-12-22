@@ -12,7 +12,8 @@ From where to take files to preprocess.
 '''
 # base_directory = \
 #     '/Users/AClab/Documents/mikbuch/Maestro_Project1/mvpa/ROIs_standard_space'
-base_directory = '/tmp/Maestro_Project1/mvpa/ROIs_standard_space/'
+# base_directory = '/tmp/Maestro_Project1/mvpa/ROIs_standard_space/'
+base_directory = '/home/jesmasta/downloads/CEREBRAL_CORTEX_ROIs'
 
 '''
 Where to put workflow outputs that we need.
@@ -25,7 +26,7 @@ datasink_directory = '/tmp/sinks'
 '''
 Place where all files created and required by workflow will be stored.
 '''
-workflow_base_directory = '/tmp/working_dir'
+workflow_base_directory = '/tmp/ttt'
 
 '''
 Workflow-specific (mask_multiple) variable. Where to store processed files.

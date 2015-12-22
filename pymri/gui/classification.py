@@ -23,10 +23,16 @@ def classifier_choose(classifier_type):
 
 
 def perform_choose(var_perform_type):
-    if var_perform_type == 'LeavePOut (LPO randomly)':
+    if 'LPO' in var_perform_type:
         LPO_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
+        var_n_times.set(LPO_n_times.get())
     else:
         LPO_frame.grid_forget()
+    if 'LORO' in var_perform_type:
+        LORO_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
+        var_n_times.set(LORO_runs.get())
+    else:
+        LORO_frame.grid_forget()
 
 
 def help_display(number):
@@ -130,11 +136,20 @@ def feature_reduction(dataset, roi_path=None):
     return dataset
 
 
-def split_data(dataset):
+def split_data(dataset, n_time=None):
 
-    training_data, test_data, valid_data = dataset.split_data(
-        sizes=(1-LPO_p.get(), LPO_p.get())
-        )
+    if 'LPO' in var_perform_type.get():
+        training_data, test_data, valid_data = dataset.split_data(
+            sizes=(1-LPO_p.get(), LPO_p.get())
+            )
+    elif 'LORO' in var_perform_type.get():
+        training_data, test_data, validation_data = dataset.leave_one_run_out(
+            runs=LORO_runs.get(),
+            volumes=LORO_volumes.get(),
+            n_time=n_time
+            )
+
+
     return training_data, test_data
 
 
@@ -148,7 +163,7 @@ def train_and_test_classifier(cls, training_data, test_data):
 
 
 def get_accuracy(cls):
-    return cls.get_best_accuracy()
+    return cls.get_accuracy()
 
 
 def visualise_results(results):
@@ -207,22 +222,26 @@ def perform_classification():
     rois_list = rois_names.get().split(' ')
     rois_num = len(rois_list)
 
-    n_times_num = LPO_n_times.get()
-
     # get the information required from Load_data and Classifier/Performance
     # subs_num = subs_num.get()
     # hands_num = hands_num.get()
     # rois_num = rois_num.get()
-    # n_times_num = n_times_num.get()
+    n_times_num = var_n_times.get()
 
     # create an array to store results of the classification performance
     results = np.zeros(shape=(subs_num, hands_num, rois_num, n_times_num))
+    # result's labels 
+    labels = []
+
+    # which time of the cross validation is that
+    var_n_time_current = tk.IntVar()
 
     # for subject in number of subjects, etc.
-
     for sub in range(subs_num):
+        labels.append([])
 
         for hand in range(hands_num):
+            labels[-1].append([])
 
             mvpa_directory = os.path.join(
                 var_base_dir.get() +
@@ -242,12 +261,16 @@ def perform_classification():
                 rois_header.append(rois_list[roi])
                 dataset_reduced = feature_reduction(dataset, roi_path)
 
+                var_n_time_current.set('0')
+
                 for n_time in range(n_times_num):
                     # create Classifier specified in Classifier tab
                     cls = create_classifier()
 
                     # split dataset use Classifier/Performance settings
-                    training_data, test_data = split_data(dataset_reduced)
+                    training_data, test_data = split_data(
+                        dataset_reduced, var_n_time_current.get()
+                        )
 
                     # train and test classifier
                     cls = train_and_test_classifier(
@@ -255,6 +278,8 @@ def perform_classification():
                         )
                     accuracy = get_accuracy(cls)
                     del cls
+
+                    var_n_time_current.set(var_n_time_current.get() + 1)
 
                     results[sub][hand][roi][n_time] = accuracy
 
@@ -269,15 +294,17 @@ def perform_classification():
             # header=delimiter.join(rois_header)
             # )
 
+    import pdb
+    pdb.set_trace()
+
     np.save(
         os.path.join(
             var_output_dir.get(),
             '201512161630_allsubs_bh'
-            )
+            ),
+        results
         )
 
-    import pdb
-    pdb.set_trace()
 
     return results
 
@@ -315,8 +342,10 @@ def save_config():
 
     config.add_section('Performance')
     config.set('Performance', 'Metrics method', var_perform_type.get())
-    config.set('Performance', 'LeavePOut', LPO_p.get())
-    config.set('Performance', 'n_times', LPO_n_times.get())
+    config.set('Performance', 'LPO p', LPO_p.get())
+    config.set('Performance', 'LPO n_times', LPO_n_times.get())
+    config.set('Performance', 'LORO runs', LORO_runs.get())
+    config.set('Performance', 'LORO volumes', LORO_volumes.get())
 
     config.add_section('Feature reduction')
     config.set('Feature reduction', 'ROIs use', var_rois_frame.get())
@@ -360,8 +389,10 @@ def load_config():
     SVC_gamma.set(config.get('Classifier', 'SVC gamma'))
 
     var_perform_type.set(config.get('Performance', 'Metrics method'))
-    LPO_p.set(config.get('Performance', 'LeavePOut'))
-    LPO_n_times.set(config.get('Performance', 'n_times'))
+    LPO_p.set(config.get('Performance', 'LPO p'))
+    LPO_n_times.set(config.get('Performance', 'LPO n_times'))
+    LORO_runs.set(config.get('Performance', 'LORO runs'))
+    LORO_volumes.set(config.get('Performance', 'LORO volumes'))
 
     var_rois_frame.set(config.get('Feature reduction', 'ROIs use'))
     rois_names.set(config.get('Feature reduction', 'ROIs names'))
@@ -916,6 +947,8 @@ perform_options_menu = tk.OptionMenu(
 perform_options_menu.grid(row=1, column=0, stick='W', padx='20')
 perform_options_menu.configure(font=font_standard)
 
+var_n_times = tk.IntVar()
+
 
 # LPO parameters ###
 LPO_frame = tk.Frame(perform_frame)
@@ -944,6 +977,34 @@ LPO_n_times_entry = tk.Entry(
     )
 LPO_n_times_entry.grid(row=0, column=3, pady=2)
 
+# LORO parameters ###
+LORO_frame = tk.Frame(perform_frame)
+
+var_n_time_current = tk.IntVar(None)
+
+# leave p
+LORO_runs = tk.IntVar()
+LORO_runs.set(5)
+LORO_runs_label = tk.Label(
+    LORO_frame, text="runs:", font=font_standard
+    )
+LORO_runs_label.grid(row=0, column=0, padx=5, pady=2)
+LORO_runs_entry = tk.Entry(
+    LORO_frame, width=5, font=font_standard, textvariable=LORO_runs
+    )
+LORO_runs_entry.grid(row=0, column=1, pady=2)
+
+# volumes perform
+LORO_volumes = tk.IntVar()
+LORO_volumes.set(145)
+LORO_volumes_label = tk.Label(
+    LORO_frame, text="volumes:", font=font_standard
+    )
+LORO_volumes_label.grid(row=0, column=2, padx=5, pady=2)
+LORO_volumes_entry = tk.Entry(
+    LORO_frame, width=5, font=font_standard, textvariable=LORO_volumes
+    )
+LORO_volumes_entry.grid(row=0, column=3, pady=2)
 
 ###########################################################################
 #

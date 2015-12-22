@@ -27,7 +27,7 @@ from Chris Olah (http://colah.github.io ).
 
 """
 
-#### Libraries
+# ### Libraries
 # Standard library
 import cPickle
 import gzip
@@ -105,6 +105,19 @@ def load_data_shared():
             np.asarray(data[1], dtype=theano.config.floatX), borrow=True)
         return shared_x, T.cast(shared_y, "int32")
     return [shared(training_data), shared(validation_data), None]
+
+def share_data(training_data, test_data):
+    def shared(data):
+        """Place the data into shared variables.  This allows Theano to copy
+        the data to the GPU, if one is available.
+
+        """
+        shared_x = theano.shared(
+            np.asarray(data[0], dtype=theano.config.floatX), borrow=True)
+        shared_y = theano.shared(
+            np.asarray(data[1], dtype=theano.config.floatX), borrow=True)
+        return shared_x, T.cast(shared_y, "int32")
+    return [shared(training_data), shared(test_data), None]
 
 #### Main class used to construct and train networks
 class Network(object):
