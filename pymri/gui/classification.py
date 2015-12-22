@@ -149,7 +149,6 @@ def split_data(dataset, n_time=None):
             n_time=n_time
             )
 
-
     return training_data, test_data
 
 
@@ -230,7 +229,7 @@ def perform_classification():
 
     # create an array to store results of the classification performance
     results = np.zeros(shape=(subs_num, hands_num, rois_num, n_times_num))
-    # result's labels 
+    # result's labels
     labels = []
 
     # which time of the cross validation is that
@@ -297,14 +296,19 @@ def perform_classification():
     import pdb
     pdb.set_trace()
 
+    import datetime
+    results_output_filename = datetime.datetime.now().strftime("%Y%m%d%H%M")
+
+    if not os.path.exist(var_output_dir.get()):
+        os.makedirs(var_output_dir.get())
+
     np.save(
         os.path.join(
             var_output_dir.get(),
-            '201512161630_allsubs_bh'
+            results_output_filename
             ),
         results
         )
-
 
     return results
 

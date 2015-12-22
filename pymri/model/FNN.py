@@ -40,7 +40,7 @@ class FNN(object):
             self.net = Network([
                 FullyConnectedLayer(n_in=784, n_out=self.hidden_layer_size),
                 SoftmaxLayer(n_in=self.hidden_layer_size, n_out=2)],
-                self.mini_batch_size
+                self.minibatch_size
                 )
 
     def train_and_test(self, training_data, test_data):
@@ -57,7 +57,7 @@ class FNN(object):
             self.net.SGD(
                 training_data,
                 self.epochs,
-                self.mini_batch_size,
+                self.minibatch_size,
                 self.learning_rate,
                 test_data
                 )
