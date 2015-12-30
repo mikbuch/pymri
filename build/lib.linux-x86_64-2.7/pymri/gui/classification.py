@@ -11,10 +11,13 @@ import os
 
 def classifier_choose(classifier_type):
     if 'FNN' in classifier_type:
-        fANN_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
-        var_nnadl.set(1)
+        ANN_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
+        if 'simple' in classifier_type:
+            var_nnadl.set(1)
+        else:
+            var_nnadl.set(0)
     else:
-        fANN_frame.grid_forget()
+        ANN_frame.grid_forget()
         var_nnadl.set(0)
     if 'SVC' in classifier_type:
         SVC_frame.grid(row=2, column=0, columnspan=10, padx=20, pady=10)
@@ -97,11 +100,11 @@ def create_classifier():
         cls = FNN(
             type=type,
             input_layer_size=var_k_features.get(),
-            hidden_layer_size=fANN_hn.get(),
+            hidden_layer_size=ANN_hn.get(),
             output_layer_size=var_classes_number.get(),
-            epochs=fANN_epochs.get(),
-            minibatch_size=fANN_ms.get(),
-            learning_rate=fANN_eta.get()
+            epochs=ANN_epochs.get(),
+            minibatch_size=ANN_ms.get(),
+            learning_rate=ANN_eta.get()
             )
 
     elif 'SVC' in var_classifier_type.get():
@@ -148,7 +151,6 @@ def split_data(dataset, n_time=None):
             volumes=LORO_volumes.get(),
             n_time=n_time
             )
-
 
     return training_data, test_data
 
@@ -230,7 +232,7 @@ def perform_classification():
 
     # create an array to store results of the classification performance
     results = np.zeros(shape=(subs_num, hands_num, rois_num, n_times_num))
-    # result's labels 
+    # result's labels
     labels = []
 
     # which time of the cross validation is that
@@ -294,17 +296,24 @@ def perform_classification():
             # header=delimiter.join(rois_header)
             # )
 
-    import pdb
-    pdb.set_trace()
+    print('RESULTS MEAN: %f' % results.mean())
+    print('ROI 000: %f' % results[:,:,0].mean())
+    print('ROI 001: %f' % results[:,:,1].mean())
+    print('ROI 002: %f' % results[:,:,2].mean())
+    
+    import datetime
+    results_output_filename = datetime.datetime.now().strftime("%Y%m%d%H%M")
+
+    if not os.path.exists(var_output_dir.get()):
+        os.makedirs(var_output_dir.get())
 
     np.save(
         os.path.join(
             var_output_dir.get(),
-            '201512161630_allsubs_bh'
+            results_output_filename
             ),
         results
         )
-
 
     return results
 
@@ -331,10 +340,10 @@ def save_config():
     config.set('Classifier', 'Type', var_classifier_type.get())
     config.set('Classifier', 'k features', var_k_features.get())
     config.set('Classifier', 'Class number', var_classes_number.get())
-    config.set('Classifier', 'FNN epochs', fANN_epochs.get())
-    config.set('Classifier', 'FNN hidden neurons', fANN_hn.get())
-    config.set('Classifier', 'FNN minibatch size', fANN_ms.get())
-    config.set('Classifier', 'FNN learning rate', fANN_eta.get())
+    config.set('Classifier', 'FNN epochs', ANN_epochs.get())
+    config.set('Classifier', 'FNN hidden neurons', ANN_hn.get())
+    config.set('Classifier', 'FNN minibatch size', ANN_ms.get())
+    config.set('Classifier', 'FNN learning rate', ANN_eta.get())
     config.set('Classifier', 'SVC C', SVC_C.get())
     config.set('Classifier', 'SVC kernel', SVC_kernel.get())
     config.set('Classifier', 'SVC degree', SVC_degree.get())
@@ -379,10 +388,10 @@ def load_config():
     var_classifier_type.set(config.get('Classifier', 'Type'))
     var_k_features.set(config.get('Classifier', 'k features'))
     var_classes_number.set(config.get('Classifier', 'Class number'))
-    fANN_epochs.set(config.get('Classifier', 'FNN epochs'))
-    fANN_hn.set(config.get('Classifier', 'FNN hidden neurons'))
-    fANN_ms.set(config.get('Classifier', 'FNN minibatch size'))
-    fANN_eta.set(config.get('Classifier', 'FNN learning rate'))
+    ANN_epochs.set(config.get('Classifier', 'FNN epochs'))
+    ANN_hn.set(config.get('Classifier', 'FNN hidden neurons'))
+    ANN_ms.set(config.get('Classifier', 'FNN minibatch size'))
+    ANN_eta.set(config.get('Classifier', 'FNN learning rate'))
     SVC_C.set(config.get('Classifier', 'SVC C'))
     SVC_kernel.set(config.get('Classifier', 'SVC kernel'))
     SVC_degree.set(config.get('Classifier', 'SVC degree'))
@@ -812,59 +821,84 @@ classifier_option.grid(row=1, stick='WS', padx='20')
 classifier_option.configure(font=font_standard)
 
 
-# fANN parameters ###
-fANN_frame = tk.Frame(classifier_frame)
+# ANN parameters ###
+ANN_frame = tk.Frame(classifier_frame)
 
 # nnadl for FNN simple
 var_nnadl = tk.IntVar()
 
-# hidden neurons
-fANN_epochs = tk.IntVar()
-fANN_epochs.set(100)
-fANN_epochs_label = tk.Label(
-    fANN_frame, text="Epochs:", font=font_standard
+# Input neurons
+ANN_in = tk.IntVar()
+# ANN_in.set(var_k_features.get())
+ANN_in_label = tk.Label(
+    ANN_frame, text="Input neurons:", font=font_standard
     )
-fANN_epochs_label.grid(row=0, column=0, padx=5, pady=2)
-fANN_epochs_entry = tk.Entry(
-    fANN_frame, width=5, font=font_standard, textvariable=fANN_epochs
+ANN_in_label.grid(row=0, column=0, padx=5, pady=2)
+ANN_in_entry = tk.Entry(
+    ANN_frame, width=5, font=font_standard, textvariable=var_k_features
     )
-fANN_epochs_entry.grid(row=0, column=1, pady=2)
+ANN_in_entry.grid(row=0, column=1, pady=2)
 
-# hidden neurons
-fANN_hn = tk.IntVar()
-fANN_hn.set(30)
-fANN_hn_label = tk.Label(
-    fANN_frame, text="Hidden neurons:", font=font_standard
+# Hidden neurons
+ANN_hn = tk.IntVar()
+ANN_hn.set(30)
+ANN_hn_label = tk.Label(
+    ANN_frame, text="Hidden neurons:", font=font_standard
     )
-fANN_hn_label.grid(row=0, column=2, padx=5, pady=2)
-fANN_hn_entry = tk.Entry(
-    fANN_frame, width=5, font=font_standard, textvariable=fANN_hn
+ANN_hn_label.grid(row=0, column=2, padx=5, pady=2)
+ANN_hn_entry = tk.Entry(
+    ANN_frame, width=5, font=font_standard, textvariable=ANN_hn
     )
-fANN_hn_entry.grid(row=0, column=3, pady=2)
+ANN_hn_entry.grid(row=0, column=3, pady=2)
+
+# Output neurons
+ANN_out = tk.IntVar()
+ANN_out.set(2)
+ANN_out_label = tk.Label(
+    ANN_frame, text="Output neurons:", font=font_standard
+    )
+ANN_out_label.grid(row=0, column=4, padx=5, pady=2)
+ANN_out_entry = tk.Entry(
+    ANN_frame, width=5, font=font_standard, textvariable=ANN_out
+    )
+ANN_out_entry.grid(row=0, column=5, pady=2)
+
+# Epochs
+ANN_epochs = tk.IntVar()
+ANN_epochs.set(100)
+ANN_epochs_label = tk.Label(
+    ANN_frame, text="Epochs:", font=font_standard
+    )
+ANN_epochs_label.grid(row=1, column=0, padx=5, pady=2)
+ANN_epochs_entry = tk.Entry(
+    ANN_frame, width=5, font=font_standard, textvariable=ANN_epochs
+    )
+ANN_epochs_entry.grid(row=1, column=1, pady=2)
+
 
 # eta learning rate
-fANN_eta = tk.DoubleVar()
-fANN_eta.set(3.0)
-fANN_eta_label = tk.Label(
-    fANN_frame, text="learning rate (eta):", font=font_standard
+ANN_eta = tk.DoubleVar()
+ANN_eta.set(3.0)
+ANN_eta_label = tk.Label(
+    ANN_frame, text="learning rate (eta):", font=font_standard
     )
-fANN_eta_label.grid(row=0, column=4, padx=5, pady=2)
-fANN_eta_entry = tk.Entry(
-    fANN_frame, width=5, font=font_standard, textvariable=fANN_eta
+ANN_eta_label.grid(row=1, column=2, padx=5, pady=2)
+ANN_eta_entry = tk.Entry(
+    ANN_frame, width=5, font=font_standard, textvariable=ANN_eta
     )
-fANN_eta_entry.grid(row=0, column=5, pady=2)
+ANN_eta_entry.grid(row=1, column=3, pady=2)
 
-# minibatch size
-fANN_ms = tk.IntVar()
-fANN_ms.set(10)
-fANN_ms_label = tk.Label(
-    fANN_frame, text="minibatch size:", font=font_standard
+# Minibatch size
+ANN_ms = tk.IntVar()
+ANN_ms.set(10)
+ANN_ms_label = tk.Label(
+    ANN_frame, text="minibatch size:", font=font_standard
     )
-fANN_ms_label.grid(row=0, column=6, padx=5, pady=2)
-fANN_ms_entry = tk.Entry(
-    fANN_frame, width=4, font=font_standard, textvariable=fANN_ms
+ANN_ms_label.grid(row=1, column=4, padx=5, pady=2)
+ANN_ms_entry = tk.Entry(
+    ANN_frame, width=4, font=font_standard, textvariable=ANN_ms
     )
-fANN_ms_entry.grid(row=0, column=7, pady=2)
+ANN_ms_entry.grid(row=1, column=5, pady=2)
 
 
 # SVC parameters ###

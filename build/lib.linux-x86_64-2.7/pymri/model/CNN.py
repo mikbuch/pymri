@@ -1,4 +1,4 @@
-class FNN(object):
+class CNN(object):
 
     def __init__(
             self, type, input_layer_size, hidden_layer_size,
@@ -11,7 +11,6 @@ class FNN(object):
         self.minibatch_size = minibatch_size
         self.epochs = epochs
         self.learning_rate = learning_rate
-        self.verbose = False
 
         self.net = None
 
@@ -20,8 +19,7 @@ class FNN(object):
     def create_network(self):
         if 'simple' in self.type:
 
-            if self.verbose:
-                print('creating FNN simple')
+            print('creating FNN simple')
 
             from pymri.model.ann.simple import Network
             self.net = Network(
@@ -33,8 +31,7 @@ class FNN(object):
                 )
         else:
 
-            if self.verbose:
-                print('creating FNN theano')
+            print('creating FNN theano')
 
             from pymri.model.ann.theano_script import Network
             from pymri.model.ann.theano_script import FullyConnectedLayer
@@ -67,8 +64,7 @@ class FNN(object):
                 self.epochs,
                 self.minibatch_size,
                 self.learning_rate,
-                test_data,
-                verbose=self.verbose
+                test_data
                 )
 
     def get_accuracy(self):

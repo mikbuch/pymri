@@ -163,15 +163,6 @@ class DatasetManager(object):
 
         self.X_processed = X
 
-        if self.nnadl:
-            self.nnadl_prep()
-        else:
-            if self.vectorize_target:
-                # how many classes do we have?
-                n_classes = len(self.contrast)
-                # vectorize target (labels), aka ConvertToOneOfMany
-                # e.g. [0, 1, 1] ==> [[1, 0], [0, 1], [0, 1]]
-                self.y = self.vectorize(self.y, n_classes)
 
     def _normalize(self, X, y, X_t):
         from sklearn.preprocessing import Normalizer
@@ -189,6 +180,8 @@ class DatasetManager(object):
 
     def _SelectKBest(self, X, y):
 
+        print('Selecting K Best from whole image')
+
         from sklearn.feature_selection import SelectKBest, f_classif
 
         # ### Define the dimension reduction to be used.
@@ -197,7 +190,9 @@ class DatasetManager(object):
         feature_selection = SelectKBest(f_classif, k=self.k_features)
 
         feature_selection.fit(X, y)
+        print('SelectKBest data reduction from: %s' % str(X.shape))
         X = feature_selection.transform(X)
+        print('SelectKBest data reduction to: %s' % str(X.shape))
 
         self.feature_reduction_method = feature_selection
 
@@ -205,7 +200,7 @@ class DatasetManager(object):
 
     def _SelectKHighest_from_mask(self, X, y, roi_path):
 
-        print('Getting k highest from mask: %s' % roi_path)
+        print('Selecting K Highest from mask: %s' % roi_path)
 
         '''
         roi_mask = masking.apply_mask(
@@ -215,12 +210,16 @@ class DatasetManager(object):
 
         roi_mask = masking.apply_mask(roi_path, self.mask_non_brain)
 
+        print('SelectKHighest ROI mask size: %d' % roi_mask.sum())
+
         from pymri.utils.masking import separate_k_highest
 
         roi_mask = separate_k_highest(self.k_features, roi_mask)
         roi_mask = roi_mask.astype(bool)
 
+        print('SelectKHighest data reduction from: %s' % str(X.shape))
         X = X[..., roi_mask]
+        print('SelectKHighest data reduction to: %s' % str(X.shape))
 
         self.feature_reduction_method = roi_path
 
@@ -269,9 +268,13 @@ class DatasetManager(object):
         roi_mask = masking.apply_mask(roi_path, self.mask_non_brain)
         roi_mask = roi_mask.astype(bool)
 
+        print('ROI mask apply ROI mask size: %s' % str(roi_mask.sum()))
+
         X = X[..., roi_mask]
 
         self.feature_reduction_method = roi_path
+
+        print('Masked data has shape: %s' % str(X.shape))
 
         return X
 
@@ -325,6 +328,18 @@ class DatasetManager(object):
                 X, X_t = self._normalize(X, y, X_t)
 
             if self.nnadl:
+                X, y = self.nnadl_prep(X, y) 
+                X_t, y_t = self.nnadl_prep(X_t, y_t) 
+            elif self.vectorize_target:
+                # how many classes do we have?
+                n_classes = len(self.contrast)
+                # vectorize target (labels), aka ConvertToOneOfMany
+                # e.g. [0, 1, 1] ==> [[1, 0], [0, 1], [0, 1]]
+                y = self.vectorize(self.y, n_classes)
+            else:
+                pass
+
+            if self.nnadl:
                 return zip(X, y), zip(X_t, y_t), None
             else:
                 return (X, y), (X_t, y_t), None
@@ -355,6 +370,18 @@ class DatasetManager(object):
         if self.normalize:
             X, X_t = self._normalize(X, y, X_t)
 
+        if self.nnadl:
+            X, y = self.nnadl_prep(X, y) 
+            X_t, y_t = self.nnadl_prep(X_t, y_t) 
+        elif self.vectorize_target:
+            # how many classes do we have?
+            n_classes = len(self.contrast)
+            # vectorize target (labels), aka ConvertToOneOfMany
+            # e.g. [0, 1, 1] ==> [[1, 0], [0, 1], [0, 1]]
+            y = self.vectorize(self.y, n_classes)
+        else:
+            pass
+
         self.training_data_max = X.max()
         self.training_data_min = X.min()
 
@@ -364,13 +391,9 @@ class DatasetManager(object):
             return (X, y), (X_t, y_t), None
 
 
-    def nnadl_prep(self):
+    def nnadl_prep(self, X, y):
         ''' Neural networks and deep learning tutorial data preparation
         '''
-        print('nnadl_preperation')
-
-        X = self.X_processed
-        y = self.y
 
         # how many classes do we have?
         n_classes = len(self.contrast)
@@ -381,8 +404,7 @@ class DatasetManager(object):
         X = np.reshape(X, (X.shape[0], X.shape[1], 1))
         y = np.reshape(y, (y.shape[0], y.shape[1], 1))
 
-        self.X_processed = X
-        self.y_processed = y
+        return X, y
 
     def vectorize(self, target, n_classes):
         y = np.zeros(shape=(target.shape[0], n_classes))

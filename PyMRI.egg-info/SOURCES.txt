@@ -19,6 +19,7 @@ pymri/gui/__init__.py
 pymri/gui/classification.py
 pymri/gui/ev_attributes.py
 pymri/gui/main_menu.py
+pymri/model/CNN.py
 pymri/model/FNN.py
 pymri/model/SVC.py
 pymri/model/__init__.py

@@ -47,29 +47,27 @@ else:
         + "network3.py to set\nthe GPU flag to True."
 
 
+def share_data(training_data, test_data):
+    def shared(data):
+        """Place the data into shared variables.  This allows Theano to copy
+        the data to the GPU, if one is available.
+
+        """
+        shared_x = theano.shared(
+            np.asarray(data[0], dtype=theano.config.floatX), borrow=True)
+        shared_y = theano.shared(
+            np.asarray(data[1], dtype=theano.config.floatX), borrow=True)
+        return shared_x, T.cast(shared_y, "int32")
+    return [shared(training_data), shared(test_data)]
+
+
 # ### Load the data
-def shared(data):
-    """Place the data into shared variables.  This allows Theano to copy
-    the data to the GPU, if one is available.
-
-    """
-    shared_x = theano.shared(
-        np.asarray(data[0], dtype=theano.config.floatX), borrow=True)
-    shared_y = theano.shared(
-        np.asarray(data[1], dtype=theano.config.floatX), borrow=True)
-    return shared_x, T.cast(shared_y, "int32")
-
-
 def load_data_shared(filename="/tmp/fmri.pkl.gz"):
     f = gzip.open(filename, 'rb')
     training_data, test_data = cPickle.load(f)
     f.close()
 
-    return [shared(training_data), shared(test_data)]
-
-
-def share_data(training_data, test_data):
-    return [shared(training_data), shared(test_data)]
+    return share_data(training_data, test_data)
 
 
 # ### Main class used to construct and train networks
@@ -98,9 +96,10 @@ class Network(object):
                 )
         self.output = self.layers[-1].output
         self.output_dropout = self.layers[-1].output_dropout
+        self.best_accuracy = None
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
-            test_data, lmbda=0.0):
+            test_data, lmbda=0.0, verbose=True):
         """Train the network using mini-batch stochastic gradient descent."""
         training_x, training_y = training_data
         test_x, test_y = test_data
@@ -154,22 +153,34 @@ class Network(object):
         for epoch in xrange(epochs):
             for minibatch_index in xrange(num_training_batches):
                 iteration = num_training_batches*epoch+minibatch_index
-                if iteration % 1000 == 0:
-                    print("Training mini-batch number {0}".format(iteration))
+                if verbose > 1:
+                    if iteration % 1000 == 0:
+                        print(
+                            "Training mini-batch number {0}".format(iteration)
+                            )
                 cost_ij = train_mb(minibatch_index)
                 if (iteration+1) % num_training_batches == 0:
                     test_accuracy = np.mean(
                         [test_mb_accuracy(j) for j in xrange(num_test_batches)]
                         )
-                    print("Epoch {0}: test accuracy {1:.2%}".format(
-                        epoch, test_accuracy))
+                    if verbose > 1:
+                        print(
+                            "Epoch {0}: test accuracy {1:.2%}".format(
+                                epoch, test_accuracy
+                            )
+                        )
                     if test_accuracy >= best_test_accuracy:
-                        print("This is the best test accuracy to date.")
+                        if verbose > 1:
+                            print("This is the best test accuracy to date.")
                         best_test_accuracy = test_accuracy
                         best_iteration = iteration
-        print("Finished training network.")
-        print("Best test accuracy of {0:.2%} obtained at iteration {1}".format(
-            best_test_accuracy, best_iteration))
+        if verbose:
+            print("Finished training network.")
+            print(
+                "Best test accuracy of {0:.2%} obtained at iteration {1}"
+                .format(best_test_accuracy, best_iteration)
+                )
+        self.best_accuracy = best_test_accuracy
 
 
 # ### Define layer types
@@ -315,7 +326,7 @@ def dropout_layer(layer, p_dropout):
     return layer*T.cast(mask, theano.config.floatX)
 
 '''
-Examples:
+# Examples:
 
 training_data, test_data = load_data_shared()
 
