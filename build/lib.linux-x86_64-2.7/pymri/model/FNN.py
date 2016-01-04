@@ -2,16 +2,17 @@ class FNN(object):
 
     def __init__(
             self, type, input_layer_size, hidden_layer_size,
-            output_layer_size, minibatch_size, epochs, learning_rate
+            output_layer_size, mini_batch_size, epochs, learning_rate,
+            verbose=False
             ):
         self.type = type
         self.input_layer_size = input_layer_size
         self.hidden_layer_size = hidden_layer_size
         self.output_layer_size = output_layer_size
-        self.minibatch_size = minibatch_size
+        self.mini_batch_size = mini_batch_size
         self.epochs = epochs
         self.learning_rate = learning_rate
-        self.verbose = False
+        self.verbose = verbose
 
         self.net = None
 
@@ -48,7 +49,7 @@ class FNN(object):
                     n_in=self.hidden_layer_size, n_out=self.hidden_layer_size
                     )
                 ],
-                self.minibatch_size
+                self.mini_batch_size
                 )
 
     def train_and_test(self, training_data, test_data):
@@ -56,7 +57,7 @@ class FNN(object):
         if 'simple' in self.type:
             self.net.SGD(
                 training_data, self.epochs,
-                self.minibatch_size, self.learning_rate,
+                self.mini_batch_size, self.learning_rate,
                 test_data=test_data
                 )
         else:
@@ -65,7 +66,7 @@ class FNN(object):
             self.net.SGD(
                 training_data,
                 self.epochs,
-                self.minibatch_size,
+                self.mini_batch_size,
                 self.learning_rate,
                 test_data,
                 verbose=self.verbose

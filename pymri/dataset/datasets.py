@@ -163,7 +163,6 @@ class DatasetManager(object):
 
         self.X_processed = X
 
-
     def _normalize(self, X, y, X_t):
         from sklearn.preprocessing import Normalizer
         NORM = Normalizer()
@@ -190,6 +189,22 @@ class DatasetManager(object):
         feature_selection = SelectKBest(f_classif, k=self.k_features)
 
         feature_selection.fit(X, y)
+
+        scores = f_classif(X, y)[0]
+        mask_k_best = np.zeros(scores.shape, dtype=bool)
+        mask_k_best[np.argsort(scores, kind="mergesort")[-self.k_features:]]\
+            = 1
+        import nibabel
+        mask_brain_img = nibabel.load(self.mask_non_brain).get_data()
+        mask_brain = mask_brain_img.flatten().astype(bool)
+
+        roi = np.zeros(mask_brain.flatten().shape)
+        roi[mask_brain] = mask_k_best
+        roi = roi.reshape(mask_brain_img.shape)
+
+        img = nibabel.Nifti1Image(roi, np.eye(4))
+        img.to_filename('/tmp/best.nii.gz')
+
         print('SelectKBest data reduction from: %s' % str(X.shape))
         X = feature_selection.transform(X)
         print('SelectKBest data reduction to: %s' % str(X.shape))
@@ -209,13 +224,24 @@ class DatasetManager(object):
         '''
 
         roi_mask = masking.apply_mask(roi_path, self.mask_non_brain)
-
-        print('SelectKHighest ROI mask size: %d' % roi_mask.sum())
+        print('SelectKHighest ROI mask size: %d' % roi_mask.astype(bool).sum())
 
         from pymri.utils.masking import separate_k_highest
 
         roi_mask = separate_k_highest(self.k_features, roi_mask)
         roi_mask = roi_mask.astype(bool)
+
+
+        import nibabel
+        mask_brain_img = nibabel.load(self.mask_non_brain).get_data()
+        mask_brain = mask_brain_img.flatten().astype(bool)
+
+        roi = np.zeros(mask_brain.flatten().shape)
+        roi[mask_brain] = roi_mask
+        roi = roi.reshape(mask_brain_img.shape)
+
+        img = nibabel.Nifti1Image(roi, np.eye(4))
+        img.to_filename('/tmp/best_roi.nii.gz')
 
         print('SelectKHighest data reduction from: %s' % str(X.shape))
         X = X[..., roi_mask]
@@ -328,8 +354,8 @@ class DatasetManager(object):
                 X, X_t = self._normalize(X, y, X_t)
 
             if self.nnadl:
-                X, y = self.nnadl_prep(X, y) 
-                X_t, y_t = self.nnadl_prep(X_t, y_t) 
+                X, y = self.nnadl_prep(X, y)
+                X_t, y_t = self.nnadl_prep(X_t, y_t)
             elif self.vectorize_target:
                 # how many classes do we have?
                 n_classes = len(self.contrast)
@@ -343,7 +369,6 @@ class DatasetManager(object):
                 return zip(X, y), zip(X_t, y_t), None
             else:
                 return (X, y), (X_t, y_t), None
-
 
     def leave_one_run_out(self, runs, volumes, n_time):
 
@@ -371,8 +396,8 @@ class DatasetManager(object):
             X, X_t = self._normalize(X, y, X_t)
 
         if self.nnadl:
-            X, y = self.nnadl_prep(X, y) 
-            X_t, y_t = self.nnadl_prep(X_t, y_t) 
+            X, y = self.nnadl_prep(X, y)
+            X_t, y_t = self.nnadl_prep(X_t, y_t)
         elif self.vectorize_target:
             # how many classes do we have?
             n_classes = len(self.contrast)
@@ -389,7 +414,6 @@ class DatasetManager(object):
             return zip(X, y), zip(X_t, y_t), None
         else:
             return (X, y), (X_t, y_t), None
-
 
     def nnadl_prep(self, X, y):
         ''' Neural networks and deep learning tutorial data preparation

@@ -1,71 +1,98 @@
 class CNN(object):
 
     def __init__(
-            self, type, input_layer_size, hidden_layer_size,
-            output_layer_size, minibatch_size, epochs, learning_rate
+            self, type, input, receptive, hidden_conv_layer,
+            output_layer_size, mini_batch_size, epochs, learning_rate,
+            verbose=False
             ):
         self.type = type
-        self.input_layer_size = input_layer_size
-        self.hidden_layer_size = hidden_layer_size
+        self.input = input
+        self.receptive = receptive
+        self.hidden_conv_layer = True
         self.output_layer_size = output_layer_size
-        self.minibatch_size = minibatch_size
+        self.mini_batch_size = mini_batch_size
         self.epochs = epochs
         self.learning_rate = learning_rate
+        self.verbose = verbose
 
         self.net = None
+
+        if self.hidden_conv_layer:
+            self.hidden_size = (self.input - self.receptive + 1) / 2
+            self.fully_connected = (self.hidden_size - self.receptive + 1) / 2
+        else:
+            self.fully_connected = (self.input - self.receptive + 1) / 2
 
         self.create_network()
 
     def create_network(self):
-        if 'simple' in self.type:
 
-            print('creating FNN simple')
+        if self.verbose:
+            print('creating CNN theano')
 
-            from pymri.model.ann.simple import Network
-            self.net = Network(
-                [
-                    self.input_layer_size,
-                    self.hidden_layer_size,
-                    self.output_layer_size
-                ]
+        from pymri.model.ann.theano_script import Network
+        from pymri.model.ann.theano_script import ConvPoolLayer
+        from pymri.model.ann.theano_script import FullyConnectedLayer
+        from pymri.model.ann.theano_script import SoftmaxLayer
+
+        if self.hidden_conv_layer:
+            self.net = Network([
+                ConvPoolLayer(
+                    image_shape=(
+                        self.mini_batch_size, 1,
+                        self.input, self.input
+                        ),
+                    filter_shape=(20, 1, self.receptive, self.receptive),
+                    poolsize=(2, 2)
+                    ),
+                ConvPoolLayer(
+                    image_shape=(
+                        self.mini_batch_size, 20,
+                        self.hidden_size, self.hidden_size
+                        ),
+                    filter_shape=(40, 20, self.receptive, self.receptive),
+                    poolsize=(2, 2)
+                    ),
+                FullyConnectedLayer(
+                    n_in=40*self.fully_connected*self.fully_connected,
+                    n_out=100
+                    ),
+                SoftmaxLayer(n_in=100, n_out=self.output_layer_size)
+                ],
+                self.mini_batch_size
                 )
         else:
-
-            print('creating FNN theano')
-
-            from pymri.model.ann.theano_script import Network
-            from pymri.model.ann.theano_script import FullyConnectedLayer
-            from pymri.model.ann.theano_script import SoftmaxLayer
-
             self.net = Network([
-                FullyConnectedLayer(
-                    n_in=self.input_layer_size, n_out=self.hidden_layer_size
+                ConvPoolLayer(
+                    image_shape=(
+                        self.mini_batch_size, 1,
+                        self.input, self.input
+                        ),
+                    filter_shape=(20, 1, self.receptive, self.receptive),
+                    poolsize=(2, 2)
                     ),
-                SoftmaxLayer(
-                    n_in=self.hidden_layer_size, n_out=self.hidden_layer_size
-                    )
-                ],
-                self.minibatch_size
+                FullyConnectedLayer(
+                    n_in=20*self.fully_connected*self.fully_connected,
+                    n_out=100
+                    ),
+                SoftmaxLayer(n_in=100, n_out=self.output_layer_size)],
+                self.mini_batch_size
                 )
 
     def train_and_test(self, training_data, test_data):
 
-        if 'simple' in self.type:
-            self.net.SGD(
-                training_data, self.epochs,
-                self.minibatch_size, self.learning_rate,
-                test_data=test_data
-                )
-        else:
-            from pymri.model.ann.theano_script import share_data
-            training_data, test_data = share_data(training_data, test_data)
-            self.net.SGD(
-                training_data,
-                self.epochs,
-                self.minibatch_size,
-                self.learning_rate,
-                test_data
-                )
+        from pymri.model.ann.theano_script import share_data
+        training_data, test_data = share_data(training_data, test_data)
+        # from pymri.model.ann.theano_script import load_data_shared
+        # training_data, test_data = load_data_shared()
+        self.net.SGD(
+            training_data,
+            self.epochs,
+            self.mini_batch_size,
+            self.learning_rate,
+            test_data,
+            verbose=self.verbose
+            )
 
     def get_accuracy(self):
         return self.net.best_accuracy

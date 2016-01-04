@@ -14,6 +14,17 @@ hidden_neurons = 46
 #        LOAD DATA
 #
 ###############################################################################
+
+
+dataset = DatasetManager(
+    mvpa_directory=mvpa_directory,
+    # conditions has to be tuples
+    contrast=(
+        tuple(var_class_00.get().split(' ')),
+        tuple(var_class_01.get().split(' '))
+        )
+    )
+
 from pymri.dataset import DatasetManager
 # dataset settings
 path_base = '/home/jesmasta/amu/master/nifti/bold/'

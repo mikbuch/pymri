@@ -98,7 +98,7 @@ grabber = Node(DataGrabber(
     )
 grabber.inputs.base_directory = opap(base_directory)
 grabber.inputs.template = '*'
-reg_dir_template = '%s/Analyzed_Data/MainExp_%sHand_Run-1.feat/reg/'
+reg_dir_template = '%s/Analyzed_Data/Main*Exp_%sHand_Run-3.feat/reg/'
 grabber.inputs.field_template = dict(
     reference=reg_dir_template + 'example_func.nii.gz',
     matrix=reg_dir_template + 'standard2example*'

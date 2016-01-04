@@ -103,7 +103,7 @@ def create_classifier():
             hidden_layer_size=ANN_hn.get(),
             output_layer_size=var_classes_number.get(),
             epochs=ANN_epochs.get(),
-            minibatch_size=ANN_ms.get(),
+            mini_batch_size=ANN_ms.get(),
             learning_rate=ANN_eta.get()
             )
 
@@ -116,6 +116,22 @@ def create_classifier():
             kernel=SVC_kernel.get(),
             gamma=SVC_gamma.get(),
             degree=SVC_degree.get()
+            )
+
+    elif 'CNN' in var_classifier_type.get():
+
+        from pymri.model import CNN
+        import math
+
+        cls = CNN(
+            type='CNN',
+            input=int(math.sqrt(var_k_features.get())),
+            receptive=5,
+            hidden_conv_layer=True,
+            output_layer_size=var_classes_number.get(),
+            epochs=ANN_epochs.get(),
+            mini_batch_size=ANN_ms.get(),
+            learning_rate=ANN_eta.get()
             )
 
     return cls
@@ -220,18 +236,23 @@ def perform_classification():
         hands_list = hands_names.get().split(' ')
     hands_num = len(hands_list)
 
-    # get list of rois
-    rois_list = rois_names.get().split(' ')
-    rois_num = len(rois_list)
-
     # get the information required from Load_data and Classifier/Performance
     # subs_num = subs_num.get()
     # hands_num = hands_num.get()
     # rois_num = rois_num.get()
     n_times_num = var_n_times.get()
 
-    # create an array to store results of the classification performance
-    results = np.zeros(shape=(subs_num, hands_num, rois_num, n_times_num))
+    if var_rois_apply.get():
+        # get list of rois
+        rois_list = rois_names.get().split(' ')
+        rois_num = len(rois_list)
+
+        # create an array to store results of the classification performance
+        results = np.zeros(shape=(subs_num, hands_num, rois_num, n_times_num))
+    else:
+        # create an array to store results of the classification performance
+        results = np.zeros(shape=(subs_num, hands_num, n_times_num))
+
     # result's labels
     labels = []
 
@@ -254,14 +275,52 @@ def perform_classification():
             # load dataset using variables from load_data frame (load_data tab)
             dataset = load_data(mvpa_directory)
 
-            rois_header = []
-            for roi in range(rois_num):
-                # get the data from specified import ROIs
-                roi_path = os.path.join(
-                    mvpa_directory + 'ROIs/' + rois_list[roi] + '.nii.gz'
-                    )
-                rois_header.append(rois_list[roi])
-                dataset_reduced = feature_reduction(dataset, roi_path)
+            # if any rois to apply first do it, else classify once
+            if var_rois_apply.get():
+                rois_header = []
+                for roi in range(rois_num):
+                    # get the data from specified import ROIs
+                    roi_path = os.path.join(
+                        mvpa_directory + 'ROIs/' + rois_list[roi] + '.nii.gz'
+                        )
+                    rois_header.append(rois_list[roi])
+                    dataset_reduced = feature_reduction(dataset, roi_path)
+
+                    var_n_time_current.set('0')
+
+                    for n_time in range(n_times_num):
+                        # create Classifier specified in Classifier tab
+                        cls = create_classifier()
+
+                        # split dataset use Classifier/Performance settings
+                        training_data, test_data = split_data(
+                            dataset_reduced, var_n_time_current.get()
+                            )
+
+                        # train and test classifier
+                        cls = train_and_test_classifier(
+                            cls, training_data, test_data
+                            )
+                        accuracy = get_accuracy(cls)
+                        del cls
+
+                        var_n_time_current.set(var_n_time_current.get() + 1)
+
+                        results[sub][hand][roi][n_time] = accuracy
+                        print(
+                            '%s, %s, %s, %d ==> %0.2f' % (
+                                subjects_list[sub], hands_list[hand],
+                                rois_list[roi], n_time, accuracy
+                                )
+                            )
+                    print(
+                        '%s, %s, %s <mean> ==> %0.2f' % (
+                            subjects_list[sub], hands_list[hand],
+                            rois_list[roi], results[sub][hand][roi].mean()
+                            )
+                        )
+            else:
+                dataset_reduced = feature_reduction(dataset)
 
                 var_n_time_current.set('0')
 
@@ -283,7 +342,13 @@ def perform_classification():
 
                     var_n_time_current.set(var_n_time_current.get() + 1)
 
-                    results[sub][hand][roi][n_time] = accuracy
+                    results[sub][hand][n_time] = accuracy
+                    print(
+                        '%s, %s, %d ==> %0.2f' % (
+                            subjects_list[sub], hands_list[hand],
+                            n_time, accuracy
+                            )
+                        )
 
         # delimiter = ','
         # np.savetxt(
@@ -297,10 +362,10 @@ def perform_classification():
             # )
 
     print('RESULTS MEAN: %f' % results.mean())
-    print('ROI 000: %f' % results[:,:,0].mean())
-    print('ROI 001: %f' % results[:,:,1].mean())
-    print('ROI 002: %f' % results[:,:,2].mean())
-    
+    if var_rois_apply.get():
+        for i in range(rois_num):
+            print('ROI 00%s: %f' % (i, results[:, :, i].mean()))
+
     import datetime
     results_output_filename = datetime.datetime.now().strftime("%Y%m%d%H%M")
 
@@ -315,6 +380,8 @@ def perform_classification():
         results
         )
 
+    import ipdb
+    ipdb.set_trace()
     return results
 
 
@@ -342,7 +409,7 @@ def save_config():
     config.set('Classifier', 'Class number', var_classes_number.get())
     config.set('Classifier', 'FNN epochs', ANN_epochs.get())
     config.set('Classifier', 'FNN hidden neurons', ANN_hn.get())
-    config.set('Classifier', 'FNN minibatch size', ANN_ms.get())
+    config.set('Classifier', 'FNN mini-batch size', ANN_ms.get())
     config.set('Classifier', 'FNN learning rate', ANN_eta.get())
     config.set('Classifier', 'SVC C', SVC_C.get())
     config.set('Classifier', 'SVC kernel', SVC_kernel.get())
@@ -357,7 +424,7 @@ def save_config():
     config.set('Performance', 'LORO volumes', LORO_volumes.get())
 
     config.add_section('Feature reduction')
-    config.set('Feature reduction', 'ROIs use', var_rois_frame.get())
+    config.set('Feature reduction', 'ROIs use', var_rois_apply.get())
     config.set('Feature reduction', 'ROIs names', rois_names.get())
     config.set('Feature reduction', 'k use', var_k_features_frame.get())
     config.set('Feature reduction', 'k features', var_k_features.get())
@@ -390,7 +457,7 @@ def load_config():
     var_classes_number.set(config.get('Classifier', 'Class number'))
     ANN_epochs.set(config.get('Classifier', 'FNN epochs'))
     ANN_hn.set(config.get('Classifier', 'FNN hidden neurons'))
-    ANN_ms.set(config.get('Classifier', 'FNN minibatch size'))
+    ANN_ms.set(config.get('Classifier', 'FNN mini-batch size'))
     ANN_eta.set(config.get('Classifier', 'FNN learning rate'))
     SVC_C.set(config.get('Classifier', 'SVC C'))
     SVC_kernel.set(config.get('Classifier', 'SVC kernel'))
@@ -403,7 +470,7 @@ def load_config():
     LORO_runs.set(config.get('Performance', 'LORO runs'))
     LORO_volumes.set(config.get('Performance', 'LORO volumes'))
 
-    var_rois_frame.set(config.get('Feature reduction', 'ROIs use'))
+    var_rois_apply.set(config.get('Feature reduction', 'ROIs use'))
     rois_names.set(config.get('Feature reduction', 'ROIs names'))
     var_k_features_frame.set(config.get('Feature reduction', 'k use'))
     var_k_features.set(config.get('Feature reduction', 'k features'))
@@ -614,15 +681,15 @@ note.grid(
 
 # ROIs frame ###############################
 
-var_rois_frame = tk.IntVar()
+var_rois_apply = tk.IntVar()
 rois_text = "Regions of Intrest (ROIs)"
 
 rois_check = tk.Checkbutton(
     feature_frame, text=rois_text, onvalue=1, offvalue=0,
     command=lambda: check_frame(
-        rois_frame, var_rois_frame, rois_check, rois_text
+        rois_frame, var_rois_apply, rois_check, rois_text
         ),
-    variable=var_rois_frame, font=font_standard
+    variable=var_rois_apply, font=font_standard
     )
 rois_check.grid(row=0, column=0, columnspan=1, padx=10, pady=10, sticky='W')
 
@@ -888,11 +955,11 @@ ANN_eta_entry = tk.Entry(
     )
 ANN_eta_entry.grid(row=1, column=3, pady=2)
 
-# Minibatch size
+# Mini-batch size
 ANN_ms = tk.IntVar()
 ANN_ms.set(10)
 ANN_ms_label = tk.Label(
-    ANN_frame, text="minibatch size:", font=font_standard
+    ANN_frame, text="mini-batch size:", font=font_standard
     )
 ANN_ms_label.grid(row=1, column=4, padx=5, pady=2)
 ANN_ms_entry = tk.Entry(

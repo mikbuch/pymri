@@ -63,6 +63,8 @@ def share_data(training_data, test_data):
 
 # ### Load the data
 def load_data_shared(filename="/tmp/fmri.pkl.gz"):
+    ''' Example pupose only
+    '''
     f = gzip.open(filename, 'rb')
     training_data, test_data = cPickle.load(f)
     f.close()
@@ -348,7 +350,7 @@ net = Network([
     SoftmaxLayer(n_in=100, n_out=2)],
     mini_batch_size
     )
-net.SGD(training_data, 60, mini_batch_size, 0.1, test_data)
+net.SGD(training_data, 60, mini_batch_size, 0.01, test_data, verbose=3)
 
 # Shallow architecture
 mini_batch_size = 10
@@ -357,6 +359,5 @@ net = Network([
     SoftmaxLayer(n_in=100, n_out=2)],
     mini_batch_size
     )
-net.SGD(training_data, 120, mini_batch_size, 3., test_data)
-
+net.SGD(training_data, 120, mini_batch_size, 3., test_data, verbose=3)
 '''
