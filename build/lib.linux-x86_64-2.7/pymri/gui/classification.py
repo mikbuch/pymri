@@ -249,9 +249,15 @@ def perform_classification():
 
         # create an array to store results of the classification performance
         results = np.zeros(shape=(subs_num, hands_num, rois_num, n_times_num))
+        results_mean = np.zeros(results.shape[:-1])
+        proportions_test_dataset = np.zeros(shape=results.shape)
+        proportions_mean = np.zeros(results.shape[:-2])
     else:
         # create an array to store results of the classification performance
         results = np.zeros(shape=(subs_num, hands_num, n_times_num))
+        results_mean = np.zeros(results.shape[:-1])
+        proportions_test_dataset = np.zeros(shape=results.shape)
+        proportions_mean = np.zeros(results.shape[:-1])
 
     # result's labels
     labels = []
@@ -296,6 +302,8 @@ def perform_classification():
                         training_data, test_data = split_data(
                             dataset_reduced, var_n_time_current.get()
                             )
+                        proportions_test_dataset[sub][hand][roi][n_time] = \
+                            test_data[1].sum()/float(test_data[1].shape[0])
 
                         # train and test classifier
                         cls = train_and_test_classifier(
@@ -319,6 +327,10 @@ def perform_classification():
                             rois_list[roi], results[sub][hand][roi].mean()
                             )
                         )
+                    results_mean[sub][hand][roi] = \
+                        results[sub][hand][roi].mean()
+                    proportions_mean[sub][hand] = \
+                        proportions_test_dataset[sub][hand][roi].mean()
             else:
                 dataset_reduced = feature_reduction(dataset)
 
@@ -332,6 +344,8 @@ def perform_classification():
                     training_data, test_data = split_data(
                         dataset_reduced, var_n_time_current.get()
                         )
+                    proportions_test_dataset[sub][hand][n_time] = \
+                        test_data[1].sum()/float(test_data[1].shape[0])
 
                     # train and test classifier
                     cls = train_and_test_classifier(
@@ -349,6 +363,16 @@ def perform_classification():
                             n_time, accuracy
                             )
                         )
+                print(
+                    '%s, %s <mean> ==> %0.2f' % (
+                        subjects_list[sub], hands_list[hand],
+                        results[sub][hand].mean()
+                        )
+                    )
+                results_mean[sub][hand] = \
+                    results[sub][hand].mean()
+                proportions_mean[sub][hand] = \
+                    proportions_test_dataset[sub][hand].mean()
 
         # delimiter = ','
         # np.savetxt(
@@ -364,7 +388,10 @@ def perform_classification():
     print('RESULTS MEAN: %f' % results.mean())
     if var_rois_apply.get():
         for i in range(rois_num):
-            print('ROI 00%s: %f' % (i, results[:, :, i].mean()))
+            print(
+                'ROI 00%s: %f (%s)' %
+                (i, results[:, :, i].mean(), rois_list[i])
+                )
 
     import datetime
     results_output_filename = datetime.datetime.now().strftime("%Y%m%d%H%M")
@@ -380,6 +407,35 @@ def perform_classification():
         results
         )
 
+    '''
+    Statistical significance vs prior chance level
+    '''
+    from scipy import stats
+
+    if var_rois_apply.get():
+        for roi in range(len(rois_list)):
+            print(
+                '\n%s statistical difference vs prior chance' % rois_list[roi]
+                )
+            print(
+                'p_value = %f' %
+                stats.ttest_1samp(
+                    results_mean[..., roi], proportions_mean.mean()
+                    )[1]
+                )
+    else:
+        print('\nstatistical difference vs prior chance')
+        print(
+            'p_value = %f' %
+            stats.ttest_1samp(results_mean.mean(), proportions_mean.mean())[1]
+            )
+
+    try:
+        from pymri.visualization.percent_bars import plot_percent_bars
+        plot_percent_bars(percents=results[0][0]*100)
+    except:
+        import ipdb
+        ipdb.set_trace()
     import ipdb
     ipdb.set_trace()
     return results

@@ -35,3 +35,5 @@ pymri/utils/masking.py
 pymri/utils/merge_nifti.py
 pymri/utils/paths_dirs_info.py
 pymri/utils/signal.py
+pymri/visualization/__init__.py
+pymri/visualization/percent_bars.py
