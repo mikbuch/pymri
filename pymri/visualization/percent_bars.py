@@ -3,16 +3,24 @@ import matplotlib.pyplot as plt
 
 
 def plot_percent_bars(
-        percents, errors=None, colors=('r', 'g', 'b', 'y', 'k'),
+        percents, errors=None,
+        colors=(
+            '#cd1111', '#3f8618', '#2c7eca', '#c9e127', '#8b408e', '#a7aba4'
+            ),
         left_right_padding = 0.5, width = 0.35, space_between_bars = 1.5,
-        xticklabels=None, y_limit = (0, 100)
+        xticklabels=None, y_limit = (40, 70)
         ):
     # percents = (20, 25, 15, 5)
     # errors = (2, 3, 5, 2)
     # colors=['r','g','b', 'y']
+    # left_right_padding = 0.5
+    # width = 0.35
+    # space_between_bars = 1.5
+    # xticklabels=None
+    # y_limit = (0, 100)
 
     if xticklabels is None:
-        xticklabels=[]
+        xticklabels = []
         for i in range(len(percents)):
             xticklabels.append('ROI_' + str(i))
 
@@ -53,9 +61,12 @@ def plot_percent_bars(
             bars.append(
                 ax.bar(
                     spacing_bars[i], percents[i], width,
-                    color=colors[i], yerr=errors[i], error_kw=error_config,
+                    color=colors[i], edgecolor=colors[i],
+                    yerr=errors[i], error_kw=error_config,
                     )
                 )
+
+    plt.axhline(52.73, linewidth=4, color='k')
 
     # add some text for labels, title and axes ticks
     ax.set_ylabel('Accuracy')
@@ -70,8 +81,6 @@ def plot_percent_bars(
 
     plt.tight_layout()
 
-    [i.set_linewidth(2) for i in ax.spines.itervalues()]
-
     # ax.legend((rects1[0], rects2[0]), ('Men', 'Women'))
 
     plt.xlim(
@@ -79,5 +88,6 @@ def plot_percent_bars(
         len(percents) * (width + left_right_padding*width) +
         left_right_padding*width
         )
-    plt.ylim = y_limit
+    plt.ylim(y_limit)
+    [i.set_linewidth(2) for i in ax.spines.itervalues()]
     plt.show()
