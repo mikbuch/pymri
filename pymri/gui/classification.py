@@ -249,13 +249,13 @@ def perform_classification():
 
         # create an array to store results of the classification performance
         results = np.zeros(shape=(subs_num, hands_num, rois_num, n_times_num))
-        results_mean = np.zeros(results.shape[:-1])
+        results_subjects = np.zeros(results.shape[:-1])
         proportions_test_dataset = np.zeros(shape=results.shape)
         proportions_mean = np.zeros(results.shape[:-2])
     else:
         # create an array to store results of the classification performance
         results = np.zeros(shape=(subs_num, hands_num, n_times_num))
-        results_mean = np.zeros(results.shape[:-1])
+        results_subjects = np.zeros(results.shape[:-1])
         proportions_test_dataset = np.zeros(shape=results.shape)
         proportions_mean = np.zeros(results.shape[:-1])
 
@@ -327,7 +327,7 @@ def perform_classification():
                             rois_list[roi], results[sub][hand][roi].mean()
                             )
                         )
-                    results_mean[sub][hand][roi] = \
+                    results_subjects[sub][hand][roi] = \
                         results[sub][hand][roi].mean()
                     proportions_mean[sub][hand] = \
                         proportions_test_dataset[sub][hand][roi].mean()
@@ -369,7 +369,7 @@ def perform_classification():
                         results[sub][hand].mean()
                         )
                     )
-                results_mean[sub][hand] = \
+                results_subjects[sub][hand] = \
                     results[sub][hand].mean()
                 proportions_mean[sub][hand] = \
                     proportions_test_dataset[sub][hand].mean()
@@ -393,19 +393,6 @@ def perform_classification():
                 (i, results[:, :, i].mean(), rois_list[i])
                 )
 
-    import datetime
-    results_output_filename = datetime.datetime.now().strftime("%Y%m%d%H%M")
-
-    if not os.path.exists(var_output_dir.get()):
-        os.makedirs(var_output_dir.get())
-
-    np.save(
-        os.path.join(
-            var_output_dir.get(),
-            results_output_filename
-            ),
-        results
-        )
 
     '''
     Statistical significance vs prior chance level
@@ -420,22 +407,42 @@ def perform_classification():
             print(
                 'p_value = %f' %
                 stats.ttest_1samp(
-                    results_mean[..., roi], proportions_mean.mean()
+                    results_subjects[..., roi], proportions_mean.mean()
                     )[1]
                 )
+        results_rois = np.array(
+            [
+                results_subjects[..., i].mean()
+                for i in range(results_subjects.shape[-1])
+            ]
+            )
+        print('results for particular ROIs: %s' % results_rois.flatten())
     else:
         print('\nstatistical difference vs prior chance')
         print(
             'p_value = %f' %
-            stats.ttest_1samp(results_mean.mean(), proportions_mean.mean())[1]
+            stats.ttest_1samp(
+                results_subjects.mean(), proportions_mean.mean()
+                )[1]
             )
 
-    try:
-        from pymri.visualization.percent_bars import plot_percent_bars
-        plot_percent_bars(percents=results[0][0]*100)
-    except:
-        import ipdb
-        ipdb.set_trace()
+    import datetime
+    results_output_filename = datetime.datetime.now().strftime("%Y%m%d%H%M")
+
+    if not os.path.exists(var_output_dir.get()):
+        os.makedirs(var_output_dir.get())
+
+    np.save(
+        os.path.join(
+            var_output_dir.get(),
+            results_output_filename
+            ),
+        results, results_subjects, results_rois
+        )
+
+    # from pymri.visualization.percent_bars import plot_percent_bars
+    # plot_percent_bars(percents=results_rois.flatten()*100)
+
     import ipdb
     ipdb.set_trace()
     return results
