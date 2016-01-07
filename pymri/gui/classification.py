@@ -393,7 +393,6 @@ def perform_classification():
                 (i, results[:, :, i].mean(), rois_list[i])
                 )
 
-
     '''
     Statistical significance vs prior chance level
     '''
@@ -435,9 +434,30 @@ def perform_classification():
     np.save(
         os.path.join(
             var_output_dir.get(),
-            results_output_filename
+            results_output_filename + '_results'
             ),
-        results, results_subjects, results_rois
+        results
+        )
+    np.save(
+        os.path.join(
+            var_output_dir.get(),
+            results_output_filename + '_results_subjects'
+            ),
+        results_subjects
+        )
+    np.save(
+        os.path.join(
+            var_output_dir.get(),
+            results_output_filename + '_results_rois'
+            ),
+        results_rois
+        )
+    np.save(
+        os.path.join(
+            var_output_dir.get(),
+            results_output_filename + '_proportions_mean'
+            ),
+        proportions_mean
         )
 
     # from pymri.visualization.percent_bars import plot_percent_bars
