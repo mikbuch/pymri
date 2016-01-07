@@ -411,7 +411,11 @@ def perform_classification():
                 )
         results_rois = np.array(
             [
-                results_subjects[..., i].mean()
+                [
+                    results_subjects[..., i].mean(),
+                    stats.sem(results_subjects[..., i].flatten()),
+                    results_subjects[..., i].std()
+                ]
                 for i in range(results_subjects.shape[-1])
             ]
             )
