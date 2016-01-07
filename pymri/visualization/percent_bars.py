@@ -8,7 +8,8 @@ def plot_percent_bars(
             '#cd1111', '#3f8618', '#2c7eca', '#c9e127', '#8b408e', '#a7aba4'
             ),
         left_right_padding = 0.5, width = 0.35, space_between_bars = 1.5,
-        xticklabels=None, y_limit = (40, 70)
+        xticklabels=None, random_chance=None, random_chance_linewidth=5,
+        y_limit = (40, 70)
         ):
     # percents = (20, 25, 15, 5)
     # errors = (2, 3, 5, 2)
@@ -66,7 +67,8 @@ def plot_percent_bars(
                     )
                 )
 
-    plt.axhline(52.73, linewidth=4, color='k')
+    if random_chance is not None:
+        plt.axhline(random_chance, linewidth=random_chance_linewidth, color='k')
 
     # add some text for labels, title and axes ticks
     ax.set_ylabel('Accuracy')
