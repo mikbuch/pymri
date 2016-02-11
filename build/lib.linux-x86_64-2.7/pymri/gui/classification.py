@@ -145,11 +145,10 @@ def feature_reduction(dataset, roi_path=None):
         reduction_method = None
 
     dataset.feature_reduction(
-        roi_path=roi_path,
-        k_features=var_k_features.get(),
-        reduction_method=reduction_method,
-        normalize=var_normalize.get(),
-        nnadl=var_nnadl.get()
+        k_features=784,
+        reduction_method='SelectKBest (SKB)',
+        normalize=True,
+        nnadl=True
         )
 
     return dataset
@@ -411,11 +410,15 @@ def perform_classification():
                 )
         results_rois = np.array(
             [
-                results_subjects[..., i].mean()
+                [
+                    results_subjects[..., i].mean(),
+                    stats.sem(results_subjects[..., i].flatten()),
+                    results_subjects[..., i].std()
+                ]
                 for i in range(results_subjects.shape[-1])
             ]
             )
-        print('results for particular ROIs: %s' % results_rois.flatten())
+        print('results for particular ROIs: %s' % results_rois.T[0].flatten())
     else:
         print('\nstatistical difference vs prior chance')
         print(

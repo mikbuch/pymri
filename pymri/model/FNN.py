@@ -58,7 +58,8 @@ class FNN(object):
             self.net.SGD(
                 training_data, self.epochs,
                 self.mini_batch_size, self.learning_rate,
-                test_data=test_data
+                test_data=test_data,
+                verbose=self.verbose
                 )
         else:
             from pymri.model.ann.theano_script import share_data

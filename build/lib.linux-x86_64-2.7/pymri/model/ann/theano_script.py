@@ -183,6 +183,8 @@ class Network(object):
                 .format(best_test_accuracy, best_iteration)
                 )
         self.best_accuracy = best_test_accuracy
+        import ipdb
+        ipdb.set_trace()
 
 
 # ### Define layer types

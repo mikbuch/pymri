@@ -347,11 +347,11 @@ class DatasetManager(object):
                 self.X_processed, self.y, train_size=train_size
                 )
 
-            self.training_data_max = X.max()
-            self.training_data_min = X.min()
-
             if self.normalize:
                 X, X_t = self._normalize(X, y, X_t)
+
+            self.training_data_max = X.max()
+            self.training_data_min = X.min()
 
             if self.nnadl:
                 X, y = self.nnadl_prep(X, y)

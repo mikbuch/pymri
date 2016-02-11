@@ -76,6 +76,8 @@ class Network(object):
             else:
                 if verbose:
                     print "Epoch {0} complete".format(j)
+        self.biases = self.best_biases
+        self.weights = self.best_weights
 
     def update_mini_batch(self, mini_batch, eta):
         """Update the network's weights and biases by applying

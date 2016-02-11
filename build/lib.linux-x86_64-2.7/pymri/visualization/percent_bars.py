@@ -3,9 +3,13 @@ import matplotlib.pyplot as plt
 
 
 def plot_percent_bars(
-        percents, errors=None, colors=('r', 'g', 'b', 'y', 'k'),
+        percents, errors=None,
+        colors=(
+            '#cd1111', '#3f8618', '#2c7eca', '#c9e127', '#8b408e', '#a7aba4'
+            ),
         left_right_padding = 0.5, width = 0.35, space_between_bars = 1.5,
-        xticklabels=None, y_limit = (40, 70)
+        xticklabels=None, random_chance=None, random_chance_linewidth=5,
+        y_limit = (40, 70)
         ):
     # percents = (20, 25, 15, 5)
     # errors = (2, 3, 5, 2)
@@ -58,9 +62,13 @@ def plot_percent_bars(
             bars.append(
                 ax.bar(
                     spacing_bars[i], percents[i], width,
-                    color=colors[i], yerr=errors[i], error_kw=error_config,
+                    color=colors[i], edgecolor=colors[i],
+                    yerr=errors[i], error_kw=error_config,
                     )
                 )
+
+    if random_chance is not None:
+        plt.axhline(random_chance, linewidth=random_chance_linewidth, color='k')
 
     # add some text for labels, title and axes ticks
     ax.set_ylabel('Accuracy')
@@ -74,7 +82,6 @@ def plot_percent_bars(
     plt.rc('font', **font)
 
     plt.tight_layout()
-
 
     # ax.legend((rects1[0], rects2[0]), ('Men', 'Women'))
 

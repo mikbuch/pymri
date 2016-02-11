@@ -7,10 +7,10 @@
 
 
 # evaluate individual:
-def get_prob_class(net, x, label):
+def get_prob_class(net, x, category_label):
     output_layer = net.feedforward(x)
-    x_1 = output_layer[0]
-    x_2 = output_layer[1]
+    x = output_layer[0]
+    y = output_layer[1]
 
     # ### fitness function #01
     # maximize prob_class
@@ -25,6 +25,18 @@ def get_prob_class(net, x, label):
 
     # ### fitness function #03
 
-    fitness_value = x_1 - x_2 + (1 - x_1 - x_2)/2
+
+    if category_label == 1:
+        fv = x - y
+        fv = fv + (1-fv)/2
+
+        # fv = x / math.sqrt(math.pow(x, 2) + math.pow(y, 2))
+    else:
+        fv = y - x
+        fv = fv + (1-fv)/2
+
+        # fv = y / math.sqrt(math.pow(y, 2) + math.pow(x, 2))
+
+    fitness_value = fv
 
     return fitness_value
