@@ -10,7 +10,7 @@ Combine statistical maps generated with MVPA searchlight analysis.
 2. Then individual maps are registered to MNI152 space.
 
 NOTICE:
-This version of the script loads maps from specified directory (results_path).
+This version of the script loads maps from specified directory (maps_path).
 '''
 
 from fnmatch import fnmatch
@@ -24,8 +24,10 @@ from scipy import stats
 ############################################
 #       PATHS AND SETTINGS
 ############################################
-mask_path = '/usr/share/fsl/data/standard/MNI152_T1_2mm_brain_mask.nii.gz'
-results_path = './tmp/results'
+mask_path = os.path.join(
+    os.environ['FSLDIR'], 'data/standard/MNI152_T1_2mm_brain_mask.nii.gz'
+    )
+maps_path = '/tmp/results'
 
 
 p_level = 0.0001
@@ -33,7 +35,9 @@ p_level = 0.0001
 output_directory = './'
 zscore_map_filename = 'thr_zscore_p%s.nii.gz' % str(p_level)
 mean_map_filename = 'mean_map.nii.gz'
-bg_brain_path = '/usr/share/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
+bg_brain_path = os.path.join(
+    os.environ['FSLDIR'], 'data/standard/MNI152_T1_2mm_brain.nii.gz'
+    )
 
 
 ############################################
@@ -49,11 +53,11 @@ mask = mask_img.get_data().astype(bool)
 # Load maps registered to mni152
 files = []
 
-for file in os.listdir(results_path):
+for file in os.listdir(maps_path):
     if fnmatch(file, '*MNI152.nii.gz'):
         files.append(file)
 
-maps = np.zeros((len(files),) + mask.sum())
+maps = np.zeros((len(files), mask.sum()))
 
 for i in range(len(files)):
     maps[i] = nib.load(files[i]).get_data()[mask]

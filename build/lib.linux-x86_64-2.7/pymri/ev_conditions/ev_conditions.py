@@ -116,7 +116,7 @@ def get_attributes(
 
     # transform seconds to volumens
     for ev in evs:
-        ev[0] = int(round(ev[0]/float(tr)))
+        ev[0] = ev[0]/float(tr)
 
     # 4. Split lists to x sublists (where x is number of the runs).
     runs = [[]]
