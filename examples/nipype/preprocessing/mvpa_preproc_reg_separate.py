@@ -1,12 +1,20 @@
 '''
-name: sub_hand_preproc_merged.py
-type: script
+name:
+mvpa_preproc_reg_separate.py
+
+type:
+script
 
 Perform Feat preprocessing on given data files and then merge ouputs.
 Inputs are taken using DataGrabber interface.
 
 Specify base_directory and pattern (template) for the subject.
 
+NOTE:
+_reg_sparate in script name means that the reference for motion correction is
+extracted (or mean image is taken) for each run separately, which is not 
+exactly metodolically proper. More recent, yet algoritmically more complicated,
+solution is presented in mvpa_preproc.py
 '''
 
 ###############################################################################
@@ -30,7 +38,7 @@ Specifying here other directory is considered debugging operation.
 datasink_directory = '/tmp/sinks'
 
 '''
-Place where all files created and required by workflow will be stored.
+Directory where all files created and required by workflow will be stored.
 '''
 # workflow_base_directory = \
 #     '/Users/AClab/Documents/mikbuch/Maestro_Project1/mvpa/preprocessing'
@@ -38,6 +46,8 @@ workflow_base_directory = '/home/jesmasta/amu/master/working_dir'
 
 
 subject_template = 'GK'
+
+workflow_name = 'mvpa_preproc'
 
 
 ###############################################################################
@@ -66,7 +76,7 @@ def get_subject_names(base_directory, subject_template):
 from nipype.pipeline import Workflow, Node
 import nipype.interfaces.utility as util
 
-meta = Workflow(name='meta')
+mvpa_preproc = Workflow(name=workflow_name)
 
 inputsub = Node(
     interface=util.IdentityInterface(
@@ -129,8 +139,8 @@ featreg_merge.connect(inputnode, 'in_sub', ds, 'subject_id')
 #  input_files = functional_input.get()['func']
 #  print input_files
 
-meta.connect(inputsub, 'sub', featreg_merge, 'inputspec.in_sub')
-meta.connect(inputhand, 'hand', featreg_merge, 'inputspec.in_hand')
+mvpa_preproc.connect(inputsub, 'sub', featreg_merge, 'inputspec.in_sub')
+mvpa_preproc.connect(inputhand, 'hand', featreg_merge, 'inputspec.in_hand')
 
 ###############################################################################
 #
@@ -141,7 +151,7 @@ meta.connect(inputhand, 'hand', featreg_merge, 'inputspec.in_hand')
 from nipype.workflows.fmri.fsl import create_featreg_preproc
 import nipype.interfaces.fsl as fsl
 
-preproc = create_featreg_preproc(highpass=True, whichvol='mean')
+preproc = create_featreg_preproc(highpass=True, whichvol='first')
 preproc.inputs.inputspec.fwhm = 0
 preproc.inputs.inputspec.highpass = 128./(2*2.5)
 
@@ -215,11 +225,11 @@ add_two_strings_node = Node(
 '''
 If iterating trought hands will be available
 '''
-meta.connect(
+mvpa_preproc.connect(
     inputsub, 'sub',
     add_two_strings_node, 'subject'
     )
-meta.connect(
+mvpa_preproc.connect(
     inputhand, 'hand',
     add_two_strings_node, 'hand'
     )
@@ -230,17 +240,17 @@ datasink = Node(interface=DataSink(), name='datasink')
 datasink.inputs.base_directory = opap(datasink_directory)
 datasink.inputs.parameterization = False
 
-meta.connect(
+mvpa_preproc.connect(
     add_two_strings_node, 'sub_hand_name',
     datasink, 'container'
     )
 
-meta.connect(
+mvpa_preproc.connect(
     featreg_merge, 'merge.merged_file',
     # datasink, ds.inputs.subject_id + '/' + ds.inputs.hand + '_Hand/mvpa'
     datasink, 'mvpa'
     )
-# meta.connect(inputsub, 'sub', datasink, 'container')
+# mvpa_preproc.connect(inputsub, 'sub', datasink, 'container')
 
 
 datasink_masks = Node(interface=DataSink(), name='datasink_masks')
@@ -248,7 +258,7 @@ datasink_masks.inputs.base_directory = opap(datasink_directory)
 datasink_masks.inputs.parameterization = False
 datasink_masks.inputs.substitutions = [('', ''), ('vol0000', 'mask')]
 
-meta.connect(
+mvpa_preproc.connect(
     add_two_strings_node, 'sub_hand_name',
     datasink_masks, 'container'
     )
@@ -261,7 +271,7 @@ def pickfirst(files):
     else:
         return files
 
-meta.connect(
+mvpa_preproc.connect(
     featreg_merge, ('splitnode.out_files', pickfirst),
     datasink_masks, 'mvpa'
     )
@@ -273,10 +283,10 @@ meta.connect(
 #
 ###############################################################################
 
-meta.base_dir = workflow_base_directory
-# meta.base_dir = \
+mvpa_preproc.base_dir = workflow_base_directory
+# mvpa_preproc.base_dir = \
 #    '/Users/AClab/Documents/mikbuch/Maestro_Project1/mvpa/preprocessing/'
-meta.write_graph("graph.dot")
+mvpa_preproc.write_graph("graph.dot")
 
 # Uncomment the last line to run workflow.
-# meta.run()
+# mvpa_preproc.run()
