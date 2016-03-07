@@ -48,7 +48,7 @@ def get_subject_names(base_directory, subject_template):
 
 
 def add_two_strings(subject, hand):
-    return subject + '/' + hand + '_Hand/'
+    return subject + '/Analyzed_data/MainExp_' + hand + 'Hand.mvpa/'
 
 
 def pickrun(run_files, run_num=3):
@@ -332,8 +332,8 @@ def create_mvpa_preproc(
     from nipype.interfaces.utility import Function
     add_two_strings_node = Node(
         interface=Function(
-            input_names=["subject", "hand"],
-            output_names=["sub_hand_name"],
+            input_names=['subject', 'hand'],
+            output_names=['sub_hand_name'],
             function=add_two_strings
             ),
         name='ats'
@@ -365,19 +365,14 @@ def create_mvpa_preproc(
     mvpapreproc.connect(
         merge, 'merge.merged_file',
         # datasink, ds.inputs.subject_id + '/' + ds.inputs.hand + '_Hand/mvpa'
-        datasink, 'mvpa'
+        datasink, 'preprocessed'
         )
     # mvpa_preproc.connect(inputsub, 'sub', datasink, 'container')
-
-    mvpapreproc.connect(
-        reference, 'outputnode.ref_vol',
-        datasink, 'reference_volume'
-        )
 
     datasink_masks = Node(interface=DataSink(), name='datasink_masks')
     datasink_masks.inputs.base_directory = opap(datasink_directory)
     datasink_masks.inputs.parameterization = False
-    datasink_masks.inputs.substitutions = [('', ''), ('vol0000', 'mask')]
+    datasink_masks.inputs.substitutions = [('', ''), ('vol0000', 'brain_mask')]
 
     mvpapreproc.connect(
         add_two_strings_node, 'sub_hand_name',
@@ -386,7 +381,7 @@ def create_mvpa_preproc(
 
     mvpapreproc.connect(
         merge, ('splitnode.out_files', pickfirst),
-        datasink_masks, 'mvpa'
+        datasink_masks, 'preprocessed'
         )
 
     ###########################################################################
