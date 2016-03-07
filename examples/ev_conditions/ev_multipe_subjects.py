@@ -1,5 +1,5 @@
 '''
-name: ev_example.py
+name: ev_multipe_subjcts.py
 type: script
 
 Use this script to generate all 'attributes.txt' and 'attributes_literal.txt'
@@ -21,7 +21,7 @@ preprocessed_template = base_directory + \
     '%s/Analyzed_data/MainExp_%sHand.mvpa/preprocessed'
 
 subjects = get_subject_names(base_directory, subject_template)
-hands = ['Right']
+hands = ['Left', 'Right']
 
 for sub in subjects:
     for hand in hands:
