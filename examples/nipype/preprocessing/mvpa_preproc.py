@@ -372,7 +372,7 @@ def create_mvpa_preproc(
     datasink_masks = Node(interface=DataSink(), name='datasink_masks')
     datasink_masks.inputs.base_directory = opap(datasink_directory)
     datasink_masks.inputs.parameterization = False
-    datasink_masks.inputs.substitutions = [('', ''), ('vol0000', 'brain_mask')]
+    datasink_masks.inputs.substitutions = [('', ''), ('vol0000', 'mask')]
 
     mvpapreproc.connect(
         add_two_strings_node, 'sub_hand_name',

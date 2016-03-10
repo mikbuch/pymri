@@ -104,9 +104,7 @@ p_values = results[1][maps_mask]
 zscore_masked = stats.zscore(t_scores)
 
 if corrected:
-    correction = multipletests(p_values, alpha=p_level, method='fdr_bh')
     p_reject = multipletests(p_values, alpha=p_level, method='fdr_bh')[0]
-    print()
     zscore_masked[-p_reject] = 0.0
     zscore_masked[zscore_masked <= 3.0] = 0.0
 else:

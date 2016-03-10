@@ -1,9 +1,14 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+
 import Tkinter as tk
 import tkFont
 import tkFileDialog
-
 import ttk
-import os
+
+from pymri.utils.paths_dirs_info import get_subject_names
+from pymri.dataset.datasets import DatasetManager
 
 
 # TODO: entire perform() function in subprocess to allow window to refresh
@@ -65,8 +70,6 @@ def check_frame(frame, variable, check, text, row=0, column=1, columnspan=10):
 
 
 def load_data(mvpa_directory):
-
-    from pymri.dataset.datasets import DatasetManager
 
     print('Loading database from %s' % mvpa_directory)
     dataset = DatasetManager(
@@ -144,11 +147,16 @@ def feature_reduction(dataset, roi_path=None):
     else:
         reduction_method = None
 
+    if 'FNN simple' in var_classifier_type.get():
+        nnadl = True
+    else:
+        nnadl = False
+
     dataset.feature_reduction(
-        k_features=784,
-        reduction_method='SelectKBest (SKB)',
-        normalize=True,
-        nnadl=True
+        k_features=var_k_features.get(),
+        reduction_method=reduction_method,
+        normalize=var_normalize.get(),
+        nnadl=nnadl
         )
 
     return dataset
@@ -185,9 +193,6 @@ def get_accuracy(cls):
 
 def visualise_results(results):
 
-    import numpy as np
-    import matplotlib.pyplot as plt
-
     mean_accuracies = np.zeros(shape=(LPO_n_times.get(),))
     for i in range(LPO_n_times.get()):
         mean_accuracies[i] = results[:i+1].mean()
@@ -208,24 +213,18 @@ def visualise_results(results):
 
 def perform_classification():
 
-    import numpy as np
-
-    # subs_num = 21
-    # hands_num = 2
-    # rois_num = 2
-    # n_times_num = 100
-
     # get list of subjects (subjects list specified or get from the pattern)
     if '*' in subjects_names.get() and \
             len(subjects_names.get().split(' ')) == 1:
         subjects_pattern = subjects_names.get()
 
-        from pymri.utils.paths_dirs_info import get_subject_names
         subjects_list = get_subject_names(
             var_base_dir.get(), subjects_pattern.replace('*', '')
             )
     else:
         subjects_list = subjects_names.get().split(' ')
+
+    # number of subjects
     subs_num = len(subjects_list)
 
     # get list of hands (can be only one hand) or get the pattern
@@ -258,29 +257,37 @@ def perform_classification():
         proportions_test_dataset = np.zeros(shape=results.shape)
         proportions_mean = np.zeros(results.shape[:-1])
 
-    # result's labels
+    # result's labels - we have to know which result comes from which subject,
+    # hand, iteration, etc.
     labels = []
 
-    # which time of the cross validation is that
+    # which iteration of the cross validation is that (e.g. which fold)
     var_n_time_current = tk.IntVar()
 
+    # Main loop of the program
     # for subject in number of subjects, etc.
     for sub in range(subs_num):
+        # sublist of labels for this subject
         labels.append([])
 
         for hand in range(hands_num):
+            # sublist for labels fot this subject's hand
             labels[-1].append([])
 
+            # Set mvpa directory containing bold signal file and the target.
+            # Use current subject and hand of this subject
             mvpa_directory = os.path.join(
                 var_base_dir.get() +
                 schema.get() % (subjects_list[sub], hands_list[hand])
                 )
-
             print(mvpa_directory)
-            # load dataset using variables from load_data frame (load_data tab)
+
+            # Load dataset using variables from load_data frame
+            # (load_data tab). Here volumens will be restricted to  particular,
+            # chosen contrasts (e.g. plan vs rest).
             dataset = load_data(mvpa_directory)
 
-            # if any rois to apply first do it, else classify once
+            # If any rois are specified apply them.
             if var_rois_apply.get():
                 rois_header = []
                 for roi in range(rois_num):
@@ -289,6 +296,8 @@ def perform_classification():
                         mvpa_directory + 'ROIs/' + rois_list[roi] + '.nii.gz'
                         )
                     rois_header.append(rois_list[roi])
+
+                    # reduce number of features in the dataset
                     dataset_reduced = feature_reduction(dataset, roi_path)
 
                     var_n_time_current.set('0')
