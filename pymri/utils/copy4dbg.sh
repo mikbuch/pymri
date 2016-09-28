@@ -1,13 +1,11 @@
 #!/bin/bash
 
-ARGS="$@"
-set -- $ARGS
-
 base_dir=$1
 output_dir=$2/$(basename $base_dir)
+grep_string=$3
 
-subjects=$(ls -1 $1 | grep 'GK')
-subjects='GK011RZJA GK012OHPA'
+
+subjects=$(ls -1 $1 | grep $grep_string)
 
 echo
 echo
